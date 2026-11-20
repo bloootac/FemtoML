@@ -45,12 +45,14 @@ type_expr:
 	- PolyType [identifier] type_expr     | @ i1, ..., iN. t
 */
 
-case object NumType extends TypeExpr
-case object CharType extends TypeExpr
-case class VarType(id: String) extends TypeExpr
-case class ConstructorType(arg_types: List[TypeExpr]) extends TypeExpr
-case class FunType(arg_type: TypeExpr, return_type: TypeExpr) extends TypeExpr
+case object NumType extends TypeExpr 
+case object CharType extends TypeExpr 
+case class VarType(id: String) extends TypeExpr 
+case class ConstructorType(id: String, argTypes: List[TypeExpr]) extends TypeExpr 
+case class FunType(argType: TypeExpr, returnType: TypeExpr) extends TypeExpr
 case class PolyType(vars: List[String], body: TypeExpr) extends TypeExpr
+case class UnknownType(var texpr: Option[TypeExpr]) extends TypeExpr
+class RigidType extends TypeExpr
 
 
 sealed trait Decl extends Statement
@@ -66,6 +68,7 @@ case class ValDec(id: String, value: Expr) extends Decl
 case class AndDec(dec1: Decl, dec2: Decl) extends Decl
 case class SeqDec(dec1: Decl, dec2: Decl) extends Decl
 case class RecDec(decl: ValDec) extends Decl
-case class HasType(id: String, type_expr: TypeExpr) extends Decl
+case class DataDec(id: String, vars: List[String], constructors: List[(String, List[TypeExpr])]) extends Decl
+case class HasType(id: String, typeExpr: TypeExpr) extends Decl
 
 

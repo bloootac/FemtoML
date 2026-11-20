@@ -22,77 +22,74 @@ type ConstructorEnv = Map[String, ConstructorSignature]
 type TypeDefEnv = Map[String, ConstructorType]
 
 // main entry point
-def checkDataTypes(p: Program): (TypeDefEnv, ConstructorEnv) = {
-	val defenv = evalDataDecls(p)
-	val conenv = evalConstructors(p, defenv)
-	
-	(defenv, conenv)
+def checkDataTypes[A](p: Program, cont: (TypeDefEnv, ConstructorEnv) => A): A = {
+	// register the names of all new data types, then go back and process all type constructors
+	evalDataDecls(p, d => evalConstructors(p, d, c => cont(d, c)))
 }
 
 // first pass
-def evalDataDecls(p: Program): TypeDefEnv = {
+def evalDataDecls[A](p: Program, cont: TypeDefEnv => A): A = {
 
 	val reservedTypes = Set("Num", "Char")
 	
 	p match 
-		case EmptyStmt => Map.empty
+		case EmptyStmt => cont(Map.empty)
 
 		case SeqStmt(h, t) =>
-		
-			// look through rest of program
-			val rest = evalDataDecls(t)
-
-			h match 
-				case DataDec(id, vars, _) =>
-
+	
+			// look through rest of program first, then analyse h
+			evalDataDecls(t, rest => h match
+				case DataDec(id, vars, _) => 
+				
 					// check if data type has been defined before or has duplicate type parameters
 					if (rest.contains(id)) throw new TypeDefException(s"Type $id is already defined")
 					if (reservedTypes.contains(id)) throw new TypeDefException(s"Cannot redefine built-in type $id")
 					if (vars.distinct.length != vars.length) throw new TypeDefException(s"Duplicate type parameters in $id")
-
+					
 					// add declaration to type definition environment
-					rest + (id -> ConstructorType(id, vars.map(VarType(_))))
-
-				case _ => rest
-		
+					cont(rest + (id -> ConstructorType(id, vars.map(VarType(_)))))
+					
+				case _ => cont(rest)
+			)
+					
 	
 }
 
 // second pass
-def evalConstructors(p: Program, env: TypeDefEnv): ConstructorEnv = {
+def evalConstructors[A](p: Program, env: TypeDefEnv, cont: ConstructorEnv => A): A = {
 	p match 
-		case EmptyStmt => Map.empty
+		case EmptyStmt => cont(Map.empty)
 
 		case SeqStmt(h, t) =>
-			val rest = evalConstructors(t, env)
-
-			h match
-				case DataDec(id, vars, constructors) =>
-
-					// retrieve type associated with identifier
-					val data = env.getOrElse(id, throw new TypeDefException(s"Unknown data type: $id"))
-
-					// check that all constructors are distinct 
-					val names = constructors.map(_._1)
-					if (names.distinct.length != names.length) throw new TypeDefException(s"Duplicate constructors in $id")
-
-					// generate constructor signatures
-					val current = constructors.map { case (cid, cargs) => 
-						// resolve all argument types
-						val argTypes = cargs.map(resolveType(_, env, vars.toSet))
 						
-						//create mapping to constructor signature 
-						cid -> ConstructorSignature(vars, argTypes, data)
-					}.toMap
+			evalConstructors(t, env, rest =>
+				h match
+					case DataDec(id, vars, constructors) =>
+
+						// retrieve type associated with identifier
+						val data = env.getOrElse(id, throw new TypeDefException(s"Unknown data type: $id"))
+
+						// check that all constructors are distinct 
+						val names = constructors.map(_._1)
+						if (names.distinct.length != names.length) throw new TypeDefException(s"Duplicate constructors in $id")
+
+						// generate constructor signatures
+						val current = constructors.map { case (cid, cargs) => 
+
+							// for each constructor, resolve all argument types and create mapping to constructor signature
+							resolveConstructorArgs(cargs, env, vars.toSet, rs => cid -> ConstructorSignature(vars, rs, data))
+							
+						}.toMap
 
 						// Check duplicate constructors across declarations
 						val duplicates = current.keySet.intersect(rest.keySet)
 
 						if (duplicates.nonEmpty) throw new TypeDefException(s"Duplicate constructors: ${duplicates.mkString(", ")}")
 
-						current ++ rest
+						cont(current ++ rest)
 
-				case _ => rest
+					case _ => cont(rest)
+			)
 
 }
 
@@ -103,27 +100,27 @@ def evalConstructors(p: Program, env: TypeDefEnv): ConstructorEnv = {
 	
 	we check for undefined types and incorrect constructor arguments along the way 
 */
-def resolveType(t: TypeExpr, env: TypeDefEnv, vars: Set[String]): TypeExpr = {
+def resolveType[A](t: TypeExpr, env: TypeDefEnv, vars: Set[String], cont: TypeExpr => A): A = {
 	t match 
-		case NumType => NumType
-		case CharType => CharType
-		case VarType(v) if vars.contains(v) => VarType(v)
+		case NumType                                       => cont(NumType)
+		case CharType                                      => cont(CharType)
+		case VarType(v) if vars.contains(v)                => cont(VarType(v))
 
 		// user-defined type without arguments
 		// (this will have incorrectly been parsed as a VarType)
-		case VarType(v) if env.contains(v) =>
+		case VarType(v) if env.contains(v)                 =>
 
 			// check that the constructor indeed requires 0 arguments
 			val expectedArity = env(v).argTypes.length
 			if (expectedArity != 0) throw new TypeDefException(s"Type $v expects $expectedArity arguments")
 
 			// return the correct ConstructorType
-			ConstructorType(v, Nil)
+			cont(ConstructorType(v, Nil))
 
 		// an unknown type variable
-		case VarType(v) => throw new TypeDefException(s"Unknown type variable: $v")
+		case VarType(v)                                    => throw new TypeDefException(s"Unknown type variable: $v")
 
-		case ConstructorType(id, args) =>
+		case ConstructorType(id, args)                     =>
 			// look for constructor information in environment
 			val definition = env.getOrElse(id, throw new TypeDefException(s"Unknown type constructor: $id"))
 
@@ -133,12 +130,20 @@ def resolveType(t: TypeExpr, env: TypeDefEnv, vars: Set[String]): TypeExpr = {
 			if (args.length != expectedArity) throw new TypeDefException(s"Type $id expects $expectedArity arguments, " + s"but received ${args.length}")
 
 			// return resolved constructor type
-			ConstructorType(id, args.map(resolveType(_, env, vars)))
+			resolveConstructorArgs(args, env, vars, rargs => cont(ConstructorType(id, rargs)))
 
-		case FunType(arg, ret) => FunType(resolveType(arg, env, vars), resolveType(ret, env, vars))
-
+		// resolve argument type and return type
+		case FunType(arg, ret) => resolveType(arg, env, vars, rf => resolveType(ret, env, vars, rx => cont(FunType(rf, rx))))
+		
 		case other => throw new TypeDefException(s"Invalid type in type definition: $other")
 	
+}
+
+// helper function for resolving each type in a constructor's list of argument types
+def resolveConstructorArgs[A](args: List[TypeExpr], env: TypeDefEnv, vars: Set[String], cont: List[TypeExpr] => A) : A = {
+	args match
+		case a::as => resolveType(a, env, vars, ra => resolveConstructorArgs(as, env, vars, ras => cont(ra::ras)))
+		case Nil   => cont(Nil)
 }
 
 

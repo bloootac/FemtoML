@@ -12,7 +12,7 @@ import femtoml.AST
 	this approach is used to deal with recursive types.
 */
 
-object Datatype
+object DataType
 
 case class TypeDefException(message: String) extends Exception(message)
 
@@ -50,7 +50,7 @@ def evalDataDecls(p: Program): TypeDefEnv = {
 					if (vars.distinct.length != vars.length) throw new TypeDefException(s"Duplicate type parameters in $id")
 
 					// add declaration to type definition environment
-					rest + (id -> ConstructorType(id, vars.map(VarType.apply)))
+					rest + (id -> ConstructorType(id, vars.map(VarType(_))))
 
 				case _ => rest
 		
@@ -99,6 +99,8 @@ def evalConstructors(p: Program, env: TypeDefEnv): ConstructorEnv = {
 
 	the types of a constructor's arguments may include incorrectly parsed VarTypes that actually refer to constructors defined earlier in the program.
 	the parser does not handle this issue; instead, we fix it here by replacing any VarTypes with their matching ConstructorType
+	
+	we check for undefined types and incorrect constructor arguments along the way 
 */
 def resolveType(t: TypeExpr, env: TypeDefEnv, vars: Set[String]): TypeExpr = {
 	t match 

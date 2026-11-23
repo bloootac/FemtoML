@@ -19,7 +19,8 @@ case class TypeInferenceException(message: String) extends Exception(message)
 // ============================= environment ============================= 
 
 // environments for user-defined types and constructors 
-case class ConstructorSignature(vars: List[String], argTypes: List[TypeExpr], returnType: TypeExpr)
+case class ConstructorSignature(vars: List[String], argTypes: List[TypeExpr], returnType: TypeExpr) {override def toString : String = 
+																										s"[${argTypes.mkString(", ")}] -> $returnType"}
 type ConstructorEnv = Map[String, ConstructorSignature]
 type TypeDefEnv = Map[String, ConstructorType]
 

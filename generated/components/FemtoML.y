@@ -26,66 +26,82 @@
 // T-023	`Num` 
 // T-024	`Char` 
 // T-025	`Constructor` 
-// T-026	`;;` 
-// T-027	`;` 
-// T-028	`->` 
+// T-026	`data` 
+// T-027	`;;` 
+// T-028	`;` 
+// T-029	`->` 
 %token T-003 T-004 T-005
 %token T-006 T-007 T-008 T-009 T-010 T-011 T-012 T-013 T-014 T-015 T-016 T-017 T-018
 %token T-019 T-020 T-021 T-022
 %token T-023 T-024 T-025
-%left T-026 T-027 T-021
-%right T-028
+%token T-026
+%left T-027 T-028 T-021
+%right T-029
 %%
-T-030:  // program = 
-T-030: T-031 T-026 T-030 // program = expr `;;` program
-T-030: T-038 T-026 T-030 // program = decl `;;` program
-T-031: T-032 // expr = app_expr
-T-031: T-012 T-005 T-013 T-031 // expr = `\` ID `.` expr
-T-031: T-012 T-006 T-040 T-007 // expr = `\` `(` cases: S_1 `)`
-T-031: T-019 T-038 T-020 T-031 // expr = `let` decl `in` expr
-T-032: T-032 T-033 // app_expr = a: app_expr b: const_expr
-T-032: T-033 // app_expr = const_expr
-T-033: T-003 // const_expr = NUM
-T-033: T-004 // const_expr = CHAR
-T-033: T-005 // const_expr = ID
-T-033: T-010 T-005 T-014 T-008 T-042 T-009 T-011 // const_expr = `<` ID `,` `[` args: S_2 `]` `>`
-T-033: T-006 T-031 T-007 // const_expr = `(` expr `)`
-T-034: T-003 // patt_expr = NUM
-T-034: T-004 // patt_expr = CHAR
-T-034: T-005 // patt_expr = ID
-T-034: T-010 T-005 T-014 T-008 T-044 T-009 T-011 // patt_expr = `<` ID `,` `[` args: S_3 `]` `>`
-T-034: T-006 T-034 T-007 // patt_expr = `(` patt_expr `)`
-T-035: T-034 T-028 T-031 // pattern = a: patt_expr `->` b: expr
-T-036: T-037 // type_expr = type_expr_body
-T-036: T-016 T-046 T-013 T-036 // type_expr = `@` args: S_4 `.` type_expr
-T-037: T-023 // type_expr_body = `Num`
-T-037: T-024 // type_expr_body = `Char`
-T-037: T-005 // type_expr_body = ID
-T-037: T-025 T-008 T-048 T-009 // type_expr_body = `Constructor` `[` args: S_5 `]`
-T-037: T-037 T-028 T-037 // type_expr_body = a: type_expr_body `->` b: type_expr_body
-T-037: T-006 T-036 T-007 // type_expr_body = `(` type_expr `)`
-T-038: T-005 T-017 T-031 // decl = ID `=` expr
-T-038: T-038 T-021 T-038 // decl = a: decl `and` b: decl
-T-038: T-038 T-027 T-038 // decl = a: decl `;` b: decl
-T-038: T-022 T-005 T-017 T-031 // decl = `rec` ID `=` expr
-T-038: T-005 T-018 T-036 // decl = ID `:` type_expr
-T-039: T-035 // S_1_L = pattern
-T-039: T-039 T-015 T-035 // S_1_L = S_1_L `|` pattern
-T-040:  // S_1 = 
-T-040: T-039 // S_1 = S_1_L
-T-041: T-031 // S_2_L = expr
-T-041: T-041 T-014 T-031 // S_2_L = S_2_L `,` expr
-T-042:  // S_2 = 
-T-042: T-041 // S_2 = S_2_L
-T-043: T-034 // S_3_L = patt_expr
-T-043: T-043 T-014 T-034 // S_3_L = S_3_L `,` patt_expr
-T-044:  // S_3 = 
-T-044: T-043 // S_3 = S_3_L
-T-045: T-005 // S_4_L = ID
-T-045: T-045 T-014 T-005 // S_4_L = S_4_L `,` ID
-T-046:  // S_4 = 
-T-046: T-045 // S_4 = S_4_L
-T-047: T-037 // S_5_L = type_expr_body
-T-047: T-047 T-014 T-037 // S_5_L = S_5_L `,` type_expr_body
-T-048:  // S_5 = 
-T-048: T-047 // S_5 = S_5_L
+T-031:  // program = 
+T-031: T-032 T-027 T-031 // program = expr `;;` program
+T-031: T-041 T-027 T-031 // program = decl `;;` program
+T-032: T-033 // expr = app_expr
+T-032: T-012 T-005 T-013 T-032 // expr = `\` ID `.` expr
+T-032: T-012 T-006 T-044 T-007 // expr = `\` `(` cases: S_1 `)`
+T-032: T-019 T-041 T-020 T-032 // expr = `let` decl `in` expr
+T-033: T-033 T-034 // app_expr = a: app_expr b: const_expr
+T-033: T-034 // app_expr = const_expr
+T-034: T-003 // const_expr = NUM
+T-034: T-004 // const_expr = CHAR
+T-034: T-005 // const_expr = ID
+T-034: T-010 T-005 T-014 T-008 T-046 T-009 T-011 // const_expr = `<` ID `,` `[` args: S_2 `]` `>`
+T-034: T-006 T-032 T-007 // const_expr = `(` expr `)`
+T-035: T-003 // patt_expr = NUM
+T-035: T-004 // patt_expr = CHAR
+T-035: T-005 // patt_expr = ID
+T-035: T-010 T-005 T-014 T-008 T-048 T-009 T-011 // patt_expr = `<` ID `,` `[` args: S_3 `]` `>`
+T-035: T-006 T-035 T-007 // patt_expr = `(` patt_expr `)`
+T-036: T-035 T-029 T-032 // pattern = a: patt_expr `->` b: expr
+T-037: T-038 // type_expr = type_expr_body
+T-037: T-016 T-050 T-013 T-037 // type_expr = `@` args: S_4 `.` type_expr
+T-038: T-039 T-029 T-038 // type_expr_body = a: type_expr_app `->` b: type_expr_body
+T-038: T-039 // type_expr_body = type_expr_app
+T-039: T-005 T-052 // type_expr_app = ID args: S_5
+T-039: T-040 // type_expr_app = type_expr_atom
+T-040: T-023 // type_expr_atom = `Num`
+T-040: T-024 // type_expr_atom = `Char`
+T-040: T-005 // type_expr_atom = ID
+T-040: T-006 T-037 T-007 // type_expr_atom = `(` type_expr `)`
+T-041: T-005 T-017 T-032 // decl = ID `=` expr
+T-041: T-041 T-021 T-041 // decl = a: decl `and` b: decl
+T-041: T-041 T-028 T-041 // decl = a: decl `;` b: decl
+T-041: T-022 T-005 T-017 T-032 // decl = `rec` ID `=` expr
+T-041: T-005 T-018 T-037 // decl = ID `:` type_expr
+T-041: T-026 T-005 T-054 T-017 T-056 // decl = `data` ID vars: S_6 `=` constructors: S_7
+T-042: T-005 T-058 // constructor_arg = ID args: S_8
+T-043: T-036 // S_1_L = pattern
+T-043: T-043 T-015 T-036 // S_1_L = S_1_L `|` pattern
+T-044:  // S_1 = 
+T-044: T-043 // S_1 = S_1_L
+T-045: T-032 // S_2_L = expr
+T-045: T-045 T-014 T-032 // S_2_L = S_2_L `,` expr
+T-046:  // S_2 = 
+T-046: T-045 // S_2 = S_2_L
+T-047: T-035 // S_3_L = patt_expr
+T-047: T-047 T-014 T-035 // S_3_L = S_3_L `,` patt_expr
+T-048:  // S_3 = 
+T-048: T-047 // S_3 = S_3_L
+T-049: T-005 // S_4_L = ID
+T-049: T-049 T-014 T-005 // S_4_L = S_4_L `,` ID
+T-050:  // S_4 = 
+T-050: T-049 // S_4 = S_4_L
+T-051: T-040 // S_5_L = type_expr_atom
+T-051: T-051 T-040 // S_5_L = S_5_L type_expr_atom
+T-052: T-051 // S_5 = S_5_L
+T-053: T-005 // S_6_L = ID
+T-053: T-053 T-005 // S_6_L = S_6_L ID
+T-054:  // S_6 = 
+T-054: T-053 // S_6 = S_6_L
+T-055: T-042 // S_7_L = constructor_arg
+T-055: T-055 T-015 T-042 // S_7_L = S_7_L `|` constructor_arg
+T-056: T-055 // S_7 = S_7_L
+T-057: T-040 // S_8_L = type_expr_atom
+T-057: T-057 T-040 // S_8_L = S_8_L type_expr_atom
+T-058:  // S_8 = 
+T-058: T-057 // S_8 = S_8_L

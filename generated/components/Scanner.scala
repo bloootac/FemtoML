@@ -31,13 +31,14 @@ case object `rec` extends Token { val value = (); val symbol = 22 }
 case object `Num` extends Token { val value = (); val symbol = 23 }
 case object `Char` extends Token { val value = (); val symbol = 24 }
 case object `Constructor` extends Token { val value = (); val symbol = 25 }
-case object `;;` extends Token { val value = (); val symbol = 26 }
-case object `;` extends Token { val value = (); val symbol = 27 }
-case object `->` extends Token { val value = (); val symbol = 28 }
+case object `data` extends Token { val value = (); val symbol = 26 }
+case object `;;` extends Token { val value = (); val symbol = 27 }
+case object `;` extends Token { val value = (); val symbol = 28 }
+case object `->` extends Token { val value = (); val symbol = 29 }
 // MAP SYMBOL NUMBERS TO NAMES
 val symbolName: collection.immutable.Map[Int, String] = {
      import org.sufrin.utility.ArrayMap
-    val arr = new Array[String](49)
+    val arr = new Array[String](59)
          locally {
           arr(0) = """$end"""
           arr(1) = """error"""
@@ -65,29 +66,39 @@ val symbolName: collection.immutable.Map[Int, String] = {
           arr(23) = """`Num`"""
           arr(24) = """`Char`"""
           arr(25) = """`Constructor`"""
-          arr(26) = """`;;`"""
-          arr(27) = """`;`"""
-          arr(28) = """`->`"""
-          arr(29) = """$accept"""
-          arr(30) = """program"""
-          arr(31) = """expr"""
-          arr(32) = """app_expr"""
-          arr(33) = """const_expr"""
-          arr(34) = """patt_expr"""
-          arr(35) = """pattern"""
-          arr(36) = """type_expr"""
-          arr(37) = """type_expr_body"""
-          arr(38) = """decl"""
-          arr(39) = """S_1_L"""
-          arr(40) = """S_1"""
-          arr(41) = """S_2_L"""
-          arr(42) = """S_2"""
-          arr(43) = """S_3_L"""
-          arr(44) = """S_3"""
-          arr(45) = """S_4_L"""
-          arr(46) = """S_4"""
-          arr(47) = """S_5_L"""
-          arr(48) = """S_5"""
+          arr(26) = """`data`"""
+          arr(27) = """`;;`"""
+          arr(28) = """`;`"""
+          arr(29) = """`->`"""
+          arr(30) = """$accept"""
+          arr(31) = """program"""
+          arr(32) = """expr"""
+          arr(33) = """app_expr"""
+          arr(34) = """const_expr"""
+          arr(35) = """patt_expr"""
+          arr(36) = """pattern"""
+          arr(37) = """type_expr"""
+          arr(38) = """type_expr_body"""
+          arr(39) = """type_expr_app"""
+          arr(40) = """type_expr_atom"""
+          arr(41) = """decl"""
+          arr(42) = """constructor_arg"""
+          arr(43) = """S_1_L"""
+          arr(44) = """S_1"""
+          arr(45) = """S_2_L"""
+          arr(46) = """S_2"""
+          arr(47) = """S_3_L"""
+          arr(48) = """S_3"""
+          arr(49) = """S_4_L"""
+          arr(50) = """S_4"""
+          arr(51) = """S_5_L"""
+          arr(52) = """S_5"""
+          arr(53) = """S_6_L"""
+          arr(54) = """S_6"""
+          arr(55) = """S_7_L"""
+          arr(56) = """S_7"""
+          arr(57) = """S_8_L"""
+          arr(58) = """S_8"""
          } // locally
          ArrayMap(arr)
      }
@@ -115,6 +126,7 @@ lazy val symbolToken: collection.immutable.Map[String, Token] =  collection.immu
     """Num""" -> `Num`,
     """Char""" -> `Char`,
     """Constructor""" -> `Constructor`,
+    """data""" -> `data`,
     """;;""" -> `;;`,
     """;""" -> `;`,
     """->""" -> `->`,

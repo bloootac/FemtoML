@@ -6,6 +6,7 @@
 %token `(` `)` `[` `]` `<` `>` `\` `.` `,` `|` `@` `=` `:`
 %token `let` `in` `and` `rec`
 %token `Num` `Char` `Constructor`
+%token `data`
 %left `;;` `;` `and`
 %right `->`
 
@@ -47,20 +48,34 @@ pattern: (Expr, Expr) = a:patt_expr `->` b:expr                  { ($a, $b) }
 type_expr: TypeExpr = type_expr_body                   { $type_expr_body }
                     | `@` args:(`,` ID)* `.` type_expr { PolyType($args, $type_expr) }
 
+type_expr_body: TypeExpr = 
+             a:type_expr_app `->` b:type_expr_body     { FunType($a, $b) }
+           | type_expr_app                             { $type_expr_app }
+           
+type_expr_app: TypeExpr = 
+             ID args:(type_expr_atom)+             { ConstructorType($ID, $args) }
+           | type_expr_atom                        { $type_expr_atom             }
 
-type_expr_body: TypeExpr =
+
+type_expr_atom: TypeExpr =
              `Num`                                              { NumType }
            | `Char`                                             { CharType }
-           | ID                                                 { VarType($ID) }
-           | `Constructor` `[` args: (`,` type_expr_body)* `]`  { ConstructorType($args) }
-           | a:type_expr_body `->` b:type_expr_body             { FunType($a, $b) }
+           | ID                                                 { VarType($ID) }             
            | `(` type_expr `)`                                  { $type_expr }
            			
 // =======================================================================
 decl: Decl =
-       | ID `=` expr	                                   { ValDec($ID, $expr) }
-	   | a:decl `and` b:decl                           { AndDec($a, $b) }
-	   | a:decl `;` b:decl                             { SeqDec($a, $b) }
-       | `rec` ID `=` expr		                       { RecDec(ValDec($ID, $expr)) }
-	   | ID `:` type_expr	                           { HasType($ID, $type_expr) }
+       | ID `=` expr	                                                   { ValDec($ID, $expr) }
+	   | a:decl `and` b:decl                                               { AndDec($a, $b) }
+	   | a:decl `;` b:decl                                                 { SeqDec($a, $b) }
+       | `rec` ID `=` expr		                                           { RecDec(ValDec($ID, $expr)) }
+	   | ID `:` type_expr	                                               { HasType($ID, $type_expr) }
+       | `data` ID vars:(ID)* `=` constructors: (`|` constructor_arg)+     { DataDec($ID, $vars, $constructors) }
+       
+constructor_arg: (String, List[TypeExpr]) =
+         ID args:(type_expr_atom)*                                         { ($ID, $args) }
+       
 
+       
+
+       

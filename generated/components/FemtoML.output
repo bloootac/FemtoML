@@ -1,3 +1,8 @@
+Terminals unused in grammar
+
+    `Constructor`
+
+
 Grammar
 
     0 $accept: program $end
@@ -31,48 +36,71 @@ Grammar
    21 type_expr: type_expr_body
    22      | `@` S_4 `.` type_expr
 
-   23 type_expr_body: `Num`
-   24      | `Char`
-   25      | ID
-   26      | `Constructor` `[` S_5 `]`
-   27      | type_expr_body `->` type_expr_body
-   28      | `(` type_expr `)`
+   23 type_expr_body: type_expr_app `->` type_expr_body
+   24      | type_expr_app
 
-   29 decl: ID `=` expr
-   30      | decl `and` decl
-   31      | decl `;` decl
-   32      | `rec` ID `=` expr
-   33      | ID `:` type_expr
+   25 type_expr_app: ID S_5
+   26      | type_expr_atom
 
-   34 S_1_L: pattern
-   35      | S_1_L `|` pattern
+   27 type_expr_atom: `Num`
+   28      | `Char`
+   29      | ID
+   30      | `(` type_expr `)`
 
-   36 S_1: ε
-   37      | S_1_L
+   31 decl: ID `=` expr
+   32      | decl `and` decl
+   33      | decl `;` decl
+   34      | `rec` ID `=` expr
+   35      | ID `:` type_expr
+   36      | `data` ID S_6 `=` S_7
 
-   38 S_2_L: expr
-   39      | S_2_L `,` expr
+   37 constructor_arg: ID S_8
 
-   40 S_2: ε
-   41      | S_2_L
+   38 S_1_L: pattern
+   39      | S_1_L `|` pattern
 
-   42 S_3_L: patt_expr
-   43      | S_3_L `,` patt_expr
+   40 S_1: ε
+   41      | S_1_L
 
-   44 S_3: ε
-   45      | S_3_L
+   42 S_2_L: expr
+   43      | S_2_L `,` expr
 
-   46 S_4_L: ID
-   47      | S_4_L `,` ID
+   44 S_2: ε
+   45      | S_2_L
 
-   48 S_4: ε
-   49      | S_4_L
+   46 S_3_L: patt_expr
+   47      | S_3_L `,` patt_expr
 
-   50 S_5_L: type_expr_body
-   51      | S_5_L `,` type_expr_body
+   48 S_3: ε
+   49      | S_3_L
 
-   52 S_5: ε
-   53      | S_5_L
+   50 S_4_L: ID
+   51      | S_4_L `,` ID
+
+   52 S_4: ε
+   53      | S_4_L
+
+   54 S_5_L: type_expr_atom
+   55      | S_5_L type_expr_atom
+
+   56 S_5: S_5_L
+
+   57 S_6_L: ID
+   58      | S_6_L ID
+
+   59 S_6: ε
+   60      | S_6_L
+
+   61 S_7_L: constructor_arg
+   62      | S_7_L `|` constructor_arg
+
+   63 S_7: S_7_L
+
+   64 S_8_L: type_expr_atom
+   65      | S_8_L type_expr_atom
+
+   66 S_8: ε
+   67      | S_8_L
 
 
 Terminals, with rules where they appear
@@ -81,93 +109,121 @@ Terminals, with rules where they appear
     error (256)
     NUM (258) 10 15
     CHAR (259) 11 16
-    ID (260) 5 12 13 17 18 25 29 32 33 46 47
-    `(` (261) 6 14 19 28
-    `)` (262) 6 14 19 28
-    `[` (263) 13 18 26
-    `]` (264) 13 18 26
+    ID (260) 5 12 13 17 18 25 29 31 34 35 36 37 50 51 57 58
+    `(` (261) 6 14 19 30
+    `)` (262) 6 14 19 30
+    `[` (263) 13 18
+    `]` (264) 13 18
     `<` (265) 13 18
     `>` (266) 13 18
     `\` (267) 5 6
     `.` (268) 5 22
-    `,` (269) 13 18 39 43 47 51
-    `|` (270) 35
+    `,` (269) 13 18 43 47 51
+    `|` (270) 39 62
     `@` (271) 22
-    `=` (272) 29 32
-    `:` (273) 33
+    `=` (272) 31 34 36
+    `:` (273) 35
     `let` (274) 7
     `in` (275) 7
-    `and` (276) 30
-    `rec` (277) 32
-    `Num` (278) 23
-    `Char` (279) 24
-    `Constructor` (280) 26
-    `;;` (281) 2 3
-    `;` (282) 31
-    `->` (283) 20 27
+    `and` (276) 32
+    `rec` (277) 34
+    `Num` (278) 27
+    `Char` (279) 28
+    `Constructor` (280)
+    `data` (281) 36
+    `;;` (282) 2 3
+    `;` (283) 33
+    `->` (284) 20 23
 
 
 Nonterminals, with rules where they appear
 
-    $accept (29)
+    $accept (30)
         on left: 0
-    program (30)
+    program (31)
         on left: 1 2 3
         on right: 0 2 3
-    expr (31)
+    expr (32)
         on left: 4 5 6 7
-        on right: 2 5 7 14 20 29 32 38 39
-    app_expr (32)
+        on right: 2 5 7 14 20 31 34 42 43
+    app_expr (33)
         on left: 8 9
         on right: 4 8
-    const_expr (33)
+    const_expr (34)
         on left: 10 11 12 13 14
         on right: 8 9
-    patt_expr (34)
+    patt_expr (35)
         on left: 15 16 17 18 19
-        on right: 19 20 42 43
-    pattern (35)
+        on right: 19 20 46 47
+    pattern (36)
         on left: 20
-        on right: 34 35
-    type_expr (36)
+        on right: 38 39
+    type_expr (37)
         on left: 21 22
-        on right: 22 28 33
-    type_expr_body (37)
-        on left: 23 24 25 26 27 28
-        on right: 21 27 50 51
-    decl (38)
-        on left: 29 30 31 32 33
-        on right: 3 7 30 31
-    S_1_L (39)
-        on left: 34 35
-        on right: 35 37
-    S_1 (40)
-        on left: 36 37
-        on right: 6
-    S_2_L (41)
+        on right: 22 30 35
+    type_expr_body (38)
+        on left: 23 24
+        on right: 21 23
+    type_expr_app (39)
+        on left: 25 26
+        on right: 23 24
+    type_expr_atom (40)
+        on left: 27 28 29 30
+        on right: 26 54 55 64 65
+    decl (41)
+        on left: 31 32 33 34 35 36
+        on right: 3 7 32 33
+    constructor_arg (42)
+        on left: 37
+        on right: 61 62
+    S_1_L (43)
         on left: 38 39
         on right: 39 41
-    S_2 (42)
+    S_1 (44)
         on left: 40 41
-        on right: 13
-    S_3_L (43)
+        on right: 6
+    S_2_L (45)
         on left: 42 43
         on right: 43 45
-    S_3 (44)
+    S_2 (46)
         on left: 44 45
-        on right: 18
-    S_4_L (45)
+        on right: 13
+    S_3_L (47)
         on left: 46 47
         on right: 47 49
-    S_4 (46)
+    S_3 (48)
         on left: 48 49
-        on right: 22
-    S_5_L (47)
+        on right: 18
+    S_4_L (49)
         on left: 50 51
         on right: 51 53
-    S_5 (48)
+    S_4 (50)
         on left: 52 53
-        on right: 26
+        on right: 22
+    S_5_L (51)
+        on left: 54 55
+        on right: 55 56
+    S_5 (52)
+        on left: 56
+        on right: 25
+    S_6_L (53)
+        on left: 57 58
+        on right: 58 60
+    S_6 (54)
+        on left: 59 60
+        on right: 36
+    S_7_L (55)
+        on left: 61 62
+        on right: 62 63
+    S_7 (56)
+        on left: 63
+        on right: 36
+    S_8_L (57)
+        on left: 64 65
+        on right: 65 67
+    S_8 (58)
+        on left: 66 67
+        on right: 37
 
 
 State 0
@@ -182,14 +238,15 @@ State 0
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
     `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
 
     $default  reduce using rule 1 (program)
 
-    program  go to state 9
-    expr  go to state 10
-    app_expr  go to state 11
-    const_expr  go to state 12
-    decl  go to state 13
+    program  go to state 10
+    expr  go to state 11
+    app_expr  go to state 12
+    const_expr  go to state 13
+    decl  go to state 14
 
 
 State 1
@@ -209,11 +266,11 @@ State 2
 State 3
 
    12 const_expr: ID •
-   29 decl: ID • `=` expr
-   33      | ID • `:` type_expr
+   31 decl: ID • `=` expr
+   35      | ID • `:` type_expr
 
-    `=`  shift, and go to state 14
-    `:`  shift, and go to state 15
+    `=`  shift, and go to state 15
+    `:`  shift, and go to state 16
 
     $default  reduce using rule 12 (const_expr)
 
@@ -224,22 +281,22 @@ State 4
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 17
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 18
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
 State 5
 
    13 const_expr: `<` • ID `,` `[` S_2 `]` `>`
 
-    ID  shift, and go to state 18
+    ID  shift, and go to state 19
 
 
 State 6
@@ -247,188 +304,209 @@ State 6
     5 expr: `\` • ID `.` expr
     6      | `\` • `(` S_1 `)`
 
-    ID  shift, and go to state 19
-    `(`  shift, and go to state 20
+    ID  shift, and go to state 20
+    `(`  shift, and go to state 21
 
 
 State 7
 
     7 expr: `let` • decl `in` expr
 
-    ID  shift, and go to state 21
+    ID  shift, and go to state 22
     `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
 
-    decl  go to state 22
+    decl  go to state 23
 
 
 State 8
 
-   32 decl: `rec` • ID `=` expr
+   34 decl: `rec` • ID `=` expr
 
-    ID  shift, and go to state 23
+    ID  shift, and go to state 24
 
 
 State 9
 
-    0 $accept: program • $end
+   36 decl: `data` • ID S_6 `=` S_7
 
-    $end  shift, and go to state 24
+    ID  shift, and go to state 25
 
 
 State 10
 
-    2 program: expr • `;;` program
+    0 $accept: program • $end
 
-    `;;`  shift, and go to state 25
+    $end  shift, and go to state 26
 
 
 State 11
+
+    2 program: expr • `;;` program
+
+    `;;`  shift, and go to state 27
+
+
+State 12
 
     4 expr: app_expr •
     8 app_expr: app_expr • const_expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
 
     $default  reduce using rule 4 (expr)
 
-    const_expr  go to state 26
+    const_expr  go to state 28
 
 
-State 12
+State 13
 
     9 app_expr: const_expr •
 
     $default  reduce using rule 9 (app_expr)
 
 
-State 13
-
-    3 program: decl • `;;` program
-   30 decl: decl • `and` decl
-   31      | decl • `;` decl
-
-    `and`  shift, and go to state 27
-    `;;`  shift, and go to state 28
-    `;`  shift, and go to state 29
-
-
 State 14
 
-   29 decl: ID `=` • expr
+    3 program: decl • `;;` program
+   32 decl: decl • `and` decl
+   33      | decl • `;` decl
+
+    `and`  shift, and go to state 29
+    `;;`  shift, and go to state 30
+    `;`  shift, and go to state 31
+
+
+State 15
+
+   31 decl: ID `=` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 30
-    app_expr  go to state 11
-    const_expr  go to state 12
-
-
-State 15
-
-   33 decl: ID `:` • type_expr
-
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `@`  shift, and go to state 33
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    type_expr  go to state 37
-    type_expr_body  go to state 38
+    expr  go to state 32
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
 State 16
+
+   35 decl: ID `:` • type_expr
+
+    ID  shift, and go to state 33
+    `(`  shift, and go to state 34
+    `@`  shift, and go to state 35
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    type_expr  go to state 38
+    type_expr_body  go to state 39
+    type_expr_app  go to state 40
+    type_expr_atom  go to state 41
+
+
+State 17
 
    12 const_expr: ID •
 
     $default  reduce using rule 12 (const_expr)
 
 
-State 17
+State 18
 
    14 const_expr: `(` expr • `)`
 
-    `)`  shift, and go to state 39
-
-
-State 18
-
-   13 const_expr: `<` ID • `,` `[` S_2 `]` `>`
-
-    `,`  shift, and go to state 40
+    `)`  shift, and go to state 42
 
 
 State 19
 
-    5 expr: `\` ID • `.` expr
+   13 const_expr: `<` ID • `,` `[` S_2 `]` `>`
 
-    `.`  shift, and go to state 41
+    `,`  shift, and go to state 43
 
 
 State 20
 
-    6 expr: `\` `(` • S_1 `)`
+    5 expr: `\` ID • `.` expr
 
-    NUM  shift, and go to state 42
-    CHAR  shift, and go to state 43
-    ID  shift, and go to state 44
-    `(`  shift, and go to state 45
-    `<`  shift, and go to state 46
-
-    $default  reduce using rule 36 (S_1)
-
-    patt_expr  go to state 47
-    pattern  go to state 48
-    S_1_L  go to state 49
-    S_1  go to state 50
+    `.`  shift, and go to state 44
 
 
 State 21
 
-   29 decl: ID • `=` expr
-   33      | ID • `:` type_expr
+    6 expr: `\` `(` • S_1 `)`
 
-    `=`  shift, and go to state 14
-    `:`  shift, and go to state 15
+    NUM  shift, and go to state 45
+    CHAR  shift, and go to state 46
+    ID  shift, and go to state 47
+    `(`  shift, and go to state 48
+    `<`  shift, and go to state 49
+
+    $default  reduce using rule 40 (S_1)
+
+    patt_expr  go to state 50
+    pattern  go to state 51
+    S_1_L  go to state 52
+    S_1  go to state 53
 
 
 State 22
 
-    7 expr: `let` decl • `in` expr
-   30 decl: decl • `and` decl
-   31      | decl • `;` decl
+   31 decl: ID • `=` expr
+   35      | ID • `:` type_expr
 
-    `in`  shift, and go to state 51
-    `and`  shift, and go to state 27
-    `;`  shift, and go to state 29
+    `=`  shift, and go to state 15
+    `:`  shift, and go to state 16
 
 
 State 23
 
-   32 decl: `rec` ID • `=` expr
+    7 expr: `let` decl • `in` expr
+   32 decl: decl • `and` decl
+   33      | decl • `;` decl
 
-    `=`  shift, and go to state 52
+    `in`  shift, and go to state 54
+    `and`  shift, and go to state 29
+    `;`  shift, and go to state 31
 
 
 State 24
+
+   34 decl: `rec` ID • `=` expr
+
+    `=`  shift, and go to state 55
+
+
+State 25
+
+   36 decl: `data` ID • S_6 `=` S_7
+
+    ID  shift, and go to state 56
+
+    $default  reduce using rule 59 (S_6)
+
+    S_6_L  go to state 57
+    S_6  go to state 58
+
+
+State 26
 
     0 $accept: program $end •
 
     $default  accept
 
 
-State 25
+State 27
 
     2 program: expr `;;` • program
 
@@ -440,34 +518,36 @@ State 25
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
     `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
 
     $default  reduce using rule 1 (program)
 
-    program  go to state 53
-    expr  go to state 10
-    app_expr  go to state 11
-    const_expr  go to state 12
-    decl  go to state 13
+    program  go to state 59
+    expr  go to state 11
+    app_expr  go to state 12
+    const_expr  go to state 13
+    decl  go to state 14
 
 
-State 26
+State 28
 
     8 app_expr: app_expr const_expr •
 
     $default  reduce using rule 8 (app_expr)
 
 
-State 27
+State 29
 
-   30 decl: decl `and` • decl
+   32 decl: decl `and` • decl
 
-    ID  shift, and go to state 21
+    ID  shift, and go to state 22
     `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
 
-    decl  go to state 54
+    decl  go to state 60
 
 
-State 28
+State 30
 
     3 program: decl `;;` • program
 
@@ -479,698 +559,820 @@ State 28
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
     `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
 
     $default  reduce using rule 1 (program)
 
-    program  go to state 55
-    expr  go to state 10
-    app_expr  go to state 11
-    const_expr  go to state 12
-    decl  go to state 13
-
-
-State 29
-
-   31 decl: decl `;` • decl
-
-    ID  shift, and go to state 21
-    `rec`  shift, and go to state 8
-
-    decl  go to state 56
-
-
-State 30
-
-   29 decl: ID `=` expr •
-
-    $default  reduce using rule 29 (decl)
+    program  go to state 61
+    expr  go to state 11
+    app_expr  go to state 12
+    const_expr  go to state 13
+    decl  go to state 14
 
 
 State 31
 
-   25 type_expr_body: ID •
+   33 decl: decl `;` • decl
 
-    $default  reduce using rule 25 (type_expr_body)
+    ID  shift, and go to state 22
+    `rec`  shift, and go to state 8
+    `data`  shift, and go to state 9
+
+    decl  go to state 62
 
 
 State 32
 
-   28 type_expr_body: `(` • type_expr `)`
+   31 decl: ID `=` expr •
 
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `@`  shift, and go to state 33
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    type_expr  go to state 57
-    type_expr_body  go to state 38
+    $default  reduce using rule 31 (decl)
 
 
 State 33
 
-   22 type_expr: `@` • S_4 `.` type_expr
+   25 type_expr_app: ID • S_5
+   29 type_expr_atom: ID •
 
-    ID  shift, and go to state 58
+    ID  shift, and go to state 63
+    `(`  shift, and go to state 34
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
 
-    $default  reduce using rule 48 (S_4)
+    $default  reduce using rule 29 (type_expr_atom)
 
-    S_4_L  go to state 59
-    S_4  go to state 60
+    type_expr_atom  go to state 64
+    S_5_L  go to state 65
+    S_5  go to state 66
 
 
 State 34
 
-   23 type_expr_body: `Num` •
+   30 type_expr_atom: `(` • type_expr `)`
 
-    $default  reduce using rule 23 (type_expr_body)
+    ID  shift, and go to state 33
+    `(`  shift, and go to state 34
+    `@`  shift, and go to state 35
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    type_expr  go to state 67
+    type_expr_body  go to state 39
+    type_expr_app  go to state 40
+    type_expr_atom  go to state 41
 
 
 State 35
 
-   24 type_expr_body: `Char` •
+   22 type_expr: `@` • S_4 `.` type_expr
 
-    $default  reduce using rule 24 (type_expr_body)
+    ID  shift, and go to state 68
+
+    $default  reduce using rule 52 (S_4)
+
+    S_4_L  go to state 69
+    S_4  go to state 70
 
 
 State 36
 
-   26 type_expr_body: `Constructor` • `[` S_5 `]`
+   27 type_expr_atom: `Num` •
 
-    `[`  shift, and go to state 61
+    $default  reduce using rule 27 (type_expr_atom)
 
 
 State 37
 
-   33 decl: ID `:` type_expr •
+   28 type_expr_atom: `Char` •
 
-    $default  reduce using rule 33 (decl)
+    $default  reduce using rule 28 (type_expr_atom)
 
 
 State 38
 
-   21 type_expr: type_expr_body •
-   27 type_expr_body: type_expr_body • `->` type_expr_body
+   35 decl: ID `:` type_expr •
 
-    `->`  shift, and go to state 62
+    $default  reduce using rule 35 (decl)
+
+
+State 39
+
+   21 type_expr: type_expr_body •
 
     $default  reduce using rule 21 (type_expr)
 
 
-State 39
+State 40
+
+   23 type_expr_body: type_expr_app • `->` type_expr_body
+   24      | type_expr_app •
+
+    `->`  shift, and go to state 71
+
+    $default  reduce using rule 24 (type_expr_body)
+
+
+State 41
+
+   26 type_expr_app: type_expr_atom •
+
+    $default  reduce using rule 26 (type_expr_app)
+
+
+State 42
 
    14 const_expr: `(` expr `)` •
 
     $default  reduce using rule 14 (const_expr)
 
 
-State 40
+State 43
 
    13 const_expr: `<` ID `,` • `[` S_2 `]` `>`
 
-    `[`  shift, and go to state 63
+    `[`  shift, and go to state 72
 
 
-State 41
+State 44
 
     5 expr: `\` ID `.` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 64
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 73
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
-State 42
+State 45
 
    15 patt_expr: NUM •
 
     $default  reduce using rule 15 (patt_expr)
 
 
-State 43
+State 46
 
    16 patt_expr: CHAR •
 
     $default  reduce using rule 16 (patt_expr)
 
 
-State 44
+State 47
 
    17 patt_expr: ID •
 
     $default  reduce using rule 17 (patt_expr)
 
 
-State 45
+State 48
 
    19 patt_expr: `(` • patt_expr `)`
 
-    NUM  shift, and go to state 42
-    CHAR  shift, and go to state 43
-    ID  shift, and go to state 44
-    `(`  shift, and go to state 45
-    `<`  shift, and go to state 46
+    NUM  shift, and go to state 45
+    CHAR  shift, and go to state 46
+    ID  shift, and go to state 47
+    `(`  shift, and go to state 48
+    `<`  shift, and go to state 49
 
-    patt_expr  go to state 65
-
-
-State 46
-
-   18 patt_expr: `<` • ID `,` `[` S_3 `]` `>`
-
-    ID  shift, and go to state 66
-
-
-State 47
-
-   20 pattern: patt_expr • `->` expr
-
-    `->`  shift, and go to state 67
-
-
-State 48
-
-   34 S_1_L: pattern •
-
-    $default  reduce using rule 34 (S_1_L)
+    patt_expr  go to state 74
 
 
 State 49
 
-   35 S_1_L: S_1_L • `|` pattern
-   37 S_1: S_1_L •
+   18 patt_expr: `<` • ID `,` `[` S_3 `]` `>`
 
-    `|`  shift, and go to state 68
-
-    $default  reduce using rule 37 (S_1)
+    ID  shift, and go to state 75
 
 
 State 50
 
-    6 expr: `\` `(` S_1 • `)`
+   20 pattern: patt_expr • `->` expr
 
-    `)`  shift, and go to state 69
+    `->`  shift, and go to state 76
 
 
 State 51
+
+   38 S_1_L: pattern •
+
+    $default  reduce using rule 38 (S_1_L)
+
+
+State 52
+
+   39 S_1_L: S_1_L • `|` pattern
+   41 S_1: S_1_L •
+
+    `|`  shift, and go to state 77
+
+    $default  reduce using rule 41 (S_1)
+
+
+State 53
+
+    6 expr: `\` `(` S_1 • `)`
+
+    `)`  shift, and go to state 78
+
+
+State 54
 
     7 expr: `let` decl `in` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 70
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 79
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
-State 52
+State 55
 
-   32 decl: `rec` ID `=` • expr
+   34 decl: `rec` ID `=` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 71
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 80
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
-State 53
+State 56
+
+   57 S_6_L: ID •
+
+    $default  reduce using rule 57 (S_6_L)
+
+
+State 57
+
+   58 S_6_L: S_6_L • ID
+   60 S_6: S_6_L •
+
+    ID  shift, and go to state 81
+
+    $default  reduce using rule 60 (S_6)
+
+
+State 58
+
+   36 decl: `data` ID S_6 • `=` S_7
+
+    `=`  shift, and go to state 82
+
+
+State 59
 
     2 program: expr `;;` program •
 
     $default  reduce using rule 2 (program)
 
 
-State 54
+State 60
 
-   30 decl: decl • `and` decl
-   30      | decl `and` decl •
-   31      | decl • `;` decl
+   32 decl: decl • `and` decl
+   32      | decl `and` decl •
+   33      | decl • `;` decl
 
-    $default  reduce using rule 30 (decl)
+    $default  reduce using rule 32 (decl)
 
 
-State 55
+State 61
 
     3 program: decl `;;` program •
 
     $default  reduce using rule 3 (program)
 
 
-State 56
-
-   30 decl: decl • `and` decl
-   31      | decl • `;` decl
-   31      | decl `;` decl •
-
-    $default  reduce using rule 31 (decl)
-
-
-State 57
-
-   28 type_expr_body: `(` type_expr • `)`
-
-    `)`  shift, and go to state 72
-
-
-State 58
-
-   46 S_4_L: ID •
-
-    $default  reduce using rule 46 (S_4_L)
-
-
-State 59
-
-   47 S_4_L: S_4_L • `,` ID
-   49 S_4: S_4_L •
-
-    `,`  shift, and go to state 73
-
-    $default  reduce using rule 49 (S_4)
-
-
-State 60
-
-   22 type_expr: `@` S_4 • `.` type_expr
-
-    `.`  shift, and go to state 74
-
-
-State 61
-
-   26 type_expr_body: `Constructor` `[` • S_5 `]`
-
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    $default  reduce using rule 52 (S_5)
-
-    type_expr_body  go to state 75
-    S_5_L  go to state 76
-    S_5  go to state 77
-
-
 State 62
 
-   27 type_expr_body: type_expr_body `->` • type_expr_body
+   32 decl: decl • `and` decl
+   33      | decl • `;` decl
+   33      | decl `;` decl •
 
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    type_expr_body  go to state 78
+    $default  reduce using rule 33 (decl)
 
 
 State 63
+
+   29 type_expr_atom: ID •
+
+    $default  reduce using rule 29 (type_expr_atom)
+
+
+State 64
+
+   54 S_5_L: type_expr_atom •
+
+    $default  reduce using rule 54 (S_5_L)
+
+
+State 65
+
+   55 S_5_L: S_5_L • type_expr_atom
+   56 S_5: S_5_L •
+
+    ID  shift, and go to state 63
+    `(`  shift, and go to state 34
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    $default  reduce using rule 56 (S_5)
+
+    type_expr_atom  go to state 83
+
+
+State 66
+
+   25 type_expr_app: ID S_5 •
+
+    $default  reduce using rule 25 (type_expr_app)
+
+
+State 67
+
+   30 type_expr_atom: `(` type_expr • `)`
+
+    `)`  shift, and go to state 84
+
+
+State 68
+
+   50 S_4_L: ID •
+
+    $default  reduce using rule 50 (S_4_L)
+
+
+State 69
+
+   51 S_4_L: S_4_L • `,` ID
+   53 S_4: S_4_L •
+
+    `,`  shift, and go to state 85
+
+    $default  reduce using rule 53 (S_4)
+
+
+State 70
+
+   22 type_expr: `@` S_4 • `.` type_expr
+
+    `.`  shift, and go to state 86
+
+
+State 71
+
+   23 type_expr_body: type_expr_app `->` • type_expr_body
+
+    ID  shift, and go to state 33
+    `(`  shift, and go to state 34
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    type_expr_body  go to state 87
+    type_expr_app  go to state 40
+    type_expr_atom  go to state 41
+
+
+State 72
 
    13 const_expr: `<` ID `,` `[` • S_2 `]` `>`
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    $default  reduce using rule 40 (S_2)
+    $default  reduce using rule 44 (S_2)
 
-    expr  go to state 79
-    app_expr  go to state 11
-    const_expr  go to state 12
-    S_2_L  go to state 80
-    S_2  go to state 81
+    expr  go to state 88
+    app_expr  go to state 12
+    const_expr  go to state 13
+    S_2_L  go to state 89
+    S_2  go to state 90
 
 
-State 64
+State 73
 
     5 expr: `\` ID `.` expr •
 
     $default  reduce using rule 5 (expr)
 
 
-State 65
+State 74
 
    19 patt_expr: `(` patt_expr • `)`
 
-    `)`  shift, and go to state 82
+    `)`  shift, and go to state 91
 
 
-State 66
+State 75
 
    18 patt_expr: `<` ID • `,` `[` S_3 `]` `>`
 
-    `,`  shift, and go to state 83
+    `,`  shift, and go to state 92
 
 
-State 67
+State 76
 
    20 pattern: patt_expr `->` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 84
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 93
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
-State 68
+State 77
 
-   35 S_1_L: S_1_L `|` • pattern
+   39 S_1_L: S_1_L `|` • pattern
 
-    NUM  shift, and go to state 42
-    CHAR  shift, and go to state 43
-    ID  shift, and go to state 44
-    `(`  shift, and go to state 45
-    `<`  shift, and go to state 46
+    NUM  shift, and go to state 45
+    CHAR  shift, and go to state 46
+    ID  shift, and go to state 47
+    `(`  shift, and go to state 48
+    `<`  shift, and go to state 49
 
-    patt_expr  go to state 47
-    pattern  go to state 85
+    patt_expr  go to state 50
+    pattern  go to state 94
 
 
-State 69
+State 78
 
     6 expr: `\` `(` S_1 `)` •
 
     $default  reduce using rule 6 (expr)
 
 
-State 70
+State 79
 
     7 expr: `let` decl `in` expr •
 
     $default  reduce using rule 7 (expr)
 
 
-State 71
-
-   32 decl: `rec` ID `=` expr •
-
-    $default  reduce using rule 32 (decl)
-
-
-State 72
-
-   28 type_expr_body: `(` type_expr `)` •
-
-    $default  reduce using rule 28 (type_expr_body)
-
-
-State 73
-
-   47 S_4_L: S_4_L `,` • ID
-
-    ID  shift, and go to state 86
-
-
-State 74
-
-   22 type_expr: `@` S_4 `.` • type_expr
-
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `@`  shift, and go to state 33
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    type_expr  go to state 87
-    type_expr_body  go to state 38
-
-
-State 75
-
-   27 type_expr_body: type_expr_body • `->` type_expr_body
-   50 S_5_L: type_expr_body •
-
-    `->`  shift, and go to state 62
-
-    $default  reduce using rule 50 (S_5_L)
-
-
-State 76
-
-   51 S_5_L: S_5_L • `,` type_expr_body
-   53 S_5: S_5_L •
-
-    `,`  shift, and go to state 88
-
-    $default  reduce using rule 53 (S_5)
-
-
-State 77
-
-   26 type_expr_body: `Constructor` `[` S_5 • `]`
-
-    `]`  shift, and go to state 89
-
-
-State 78
-
-   27 type_expr_body: type_expr_body • `->` type_expr_body
-   27      | type_expr_body `->` type_expr_body •
-
-    `->`  shift, and go to state 62
-
-    $default  reduce using rule 27 (type_expr_body)
-
-
-State 79
-
-   38 S_2_L: expr •
-
-    $default  reduce using rule 38 (S_2_L)
-
-
 State 80
 
-   39 S_2_L: S_2_L • `,` expr
-   41 S_2: S_2_L •
+   34 decl: `rec` ID `=` expr •
 
-    `,`  shift, and go to state 90
-
-    $default  reduce using rule 41 (S_2)
+    $default  reduce using rule 34 (decl)
 
 
 State 81
 
-   13 const_expr: `<` ID `,` `[` S_2 • `]` `>`
+   58 S_6_L: S_6_L ID •
 
-    `]`  shift, and go to state 91
+    $default  reduce using rule 58 (S_6_L)
 
 
 State 82
+
+   36 decl: `data` ID S_6 `=` • S_7
+
+    ID  shift, and go to state 95
+
+    constructor_arg  go to state 96
+    S_7_L  go to state 97
+    S_7  go to state 98
+
+
+State 83
+
+   55 S_5_L: S_5_L type_expr_atom •
+
+    $default  reduce using rule 55 (S_5_L)
+
+
+State 84
+
+   30 type_expr_atom: `(` type_expr `)` •
+
+    $default  reduce using rule 30 (type_expr_atom)
+
+
+State 85
+
+   51 S_4_L: S_4_L `,` • ID
+
+    ID  shift, and go to state 99
+
+
+State 86
+
+   22 type_expr: `@` S_4 `.` • type_expr
+
+    ID  shift, and go to state 33
+    `(`  shift, and go to state 34
+    `@`  shift, and go to state 35
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    type_expr  go to state 100
+    type_expr_body  go to state 39
+    type_expr_app  go to state 40
+    type_expr_atom  go to state 41
+
+
+State 87
+
+   23 type_expr_body: type_expr_app `->` type_expr_body •
+
+    $default  reduce using rule 23 (type_expr_body)
+
+
+State 88
+
+   42 S_2_L: expr •
+
+    $default  reduce using rule 42 (S_2_L)
+
+
+State 89
+
+   43 S_2_L: S_2_L • `,` expr
+   45 S_2: S_2_L •
+
+    `,`  shift, and go to state 101
+
+    $default  reduce using rule 45 (S_2)
+
+
+State 90
+
+   13 const_expr: `<` ID `,` `[` S_2 • `]` `>`
+
+    `]`  shift, and go to state 102
+
+
+State 91
 
    19 patt_expr: `(` patt_expr `)` •
 
     $default  reduce using rule 19 (patt_expr)
 
 
-State 83
+State 92
 
    18 patt_expr: `<` ID `,` • `[` S_3 `]` `>`
 
-    `[`  shift, and go to state 92
+    `[`  shift, and go to state 103
 
 
-State 84
+State 93
 
    20 pattern: patt_expr `->` expr •
 
     $default  reduce using rule 20 (pattern)
 
 
-State 85
+State 94
 
-   35 S_1_L: S_1_L `|` pattern •
+   39 S_1_L: S_1_L `|` pattern •
 
-    $default  reduce using rule 35 (S_1_L)
-
-
-State 86
-
-   47 S_4_L: S_4_L `,` ID •
-
-    $default  reduce using rule 47 (S_4_L)
+    $default  reduce using rule 39 (S_1_L)
 
 
-State 87
+State 95
+
+   37 constructor_arg: ID • S_8
+
+    ID  shift, and go to state 63
+    `(`  shift, and go to state 34
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    $default  reduce using rule 66 (S_8)
+
+    type_expr_atom  go to state 104
+    S_8_L  go to state 105
+    S_8  go to state 106
+
+
+State 96
+
+   61 S_7_L: constructor_arg •
+
+    $default  reduce using rule 61 (S_7_L)
+
+
+State 97
+
+   62 S_7_L: S_7_L • `|` constructor_arg
+   63 S_7: S_7_L •
+
+    `|`  shift, and go to state 107
+
+    $default  reduce using rule 63 (S_7)
+
+
+State 98
+
+   36 decl: `data` ID S_6 `=` S_7 •
+
+    $default  reduce using rule 36 (decl)
+
+
+State 99
+
+   51 S_4_L: S_4_L `,` ID •
+
+    $default  reduce using rule 51 (S_4_L)
+
+
+State 100
 
    22 type_expr: `@` S_4 `.` type_expr •
 
     $default  reduce using rule 22 (type_expr)
 
 
-State 88
+State 101
 
-   51 S_5_L: S_5_L `,` • type_expr_body
-
-    ID  shift, and go to state 31
-    `(`  shift, and go to state 32
-    `Num`  shift, and go to state 34
-    `Char`  shift, and go to state 35
-    `Constructor`  shift, and go to state 36
-
-    type_expr_body  go to state 93
-
-
-State 89
-
-   26 type_expr_body: `Constructor` `[` S_5 `]` •
-
-    $default  reduce using rule 26 (type_expr_body)
-
-
-State 90
-
-   39 S_2_L: S_2_L `,` • expr
+   43 S_2_L: S_2_L `,` • expr
 
     NUM  shift, and go to state 1
     CHAR  shift, and go to state 2
-    ID  shift, and go to state 16
+    ID  shift, and go to state 17
     `(`  shift, and go to state 4
     `<`  shift, and go to state 5
     `\`  shift, and go to state 6
     `let`  shift, and go to state 7
 
-    expr  go to state 94
-    app_expr  go to state 11
-    const_expr  go to state 12
+    expr  go to state 108
+    app_expr  go to state 12
+    const_expr  go to state 13
 
 
-State 91
+State 102
 
    13 const_expr: `<` ID `,` `[` S_2 `]` • `>`
 
-    `>`  shift, and go to state 95
+    `>`  shift, and go to state 109
 
 
-State 92
+State 103
 
    18 patt_expr: `<` ID `,` `[` • S_3 `]` `>`
 
-    NUM  shift, and go to state 42
-    CHAR  shift, and go to state 43
-    ID  shift, and go to state 44
-    `(`  shift, and go to state 45
-    `<`  shift, and go to state 46
+    NUM  shift, and go to state 45
+    CHAR  shift, and go to state 46
+    ID  shift, and go to state 47
+    `(`  shift, and go to state 48
+    `<`  shift, and go to state 49
 
-    $default  reduce using rule 44 (S_3)
+    $default  reduce using rule 48 (S_3)
 
-    patt_expr  go to state 96
-    S_3_L  go to state 97
-    S_3  go to state 98
-
-
-State 93
-
-   27 type_expr_body: type_expr_body • `->` type_expr_body
-   51 S_5_L: S_5_L `,` type_expr_body •
-
-    `->`  shift, and go to state 62
-
-    $default  reduce using rule 51 (S_5_L)
+    patt_expr  go to state 110
+    S_3_L  go to state 111
+    S_3  go to state 112
 
 
-State 94
+State 104
 
-   39 S_2_L: S_2_L `,` expr •
+   64 S_8_L: type_expr_atom •
 
-    $default  reduce using rule 39 (S_2_L)
+    $default  reduce using rule 64 (S_8_L)
 
 
-State 95
+State 105
+
+   65 S_8_L: S_8_L • type_expr_atom
+   67 S_8: S_8_L •
+
+    ID  shift, and go to state 63
+    `(`  shift, and go to state 34
+    `Num`  shift, and go to state 36
+    `Char`  shift, and go to state 37
+
+    $default  reduce using rule 67 (S_8)
+
+    type_expr_atom  go to state 113
+
+
+State 106
+
+   37 constructor_arg: ID S_8 •
+
+    $default  reduce using rule 37 (constructor_arg)
+
+
+State 107
+
+   62 S_7_L: S_7_L `|` • constructor_arg
+
+    ID  shift, and go to state 95
+
+    constructor_arg  go to state 114
+
+
+State 108
+
+   43 S_2_L: S_2_L `,` expr •
+
+    $default  reduce using rule 43 (S_2_L)
+
+
+State 109
 
    13 const_expr: `<` ID `,` `[` S_2 `]` `>` •
 
     $default  reduce using rule 13 (const_expr)
 
 
-State 96
+State 110
 
-   42 S_3_L: patt_expr •
+   46 S_3_L: patt_expr •
 
-    $default  reduce using rule 42 (S_3_L)
-
-
-State 97
-
-   43 S_3_L: S_3_L • `,` patt_expr
-   45 S_3: S_3_L •
-
-    `,`  shift, and go to state 99
-
-    $default  reduce using rule 45 (S_3)
+    $default  reduce using rule 46 (S_3_L)
 
 
-State 98
+State 111
+
+   47 S_3_L: S_3_L • `,` patt_expr
+   49 S_3: S_3_L •
+
+    `,`  shift, and go to state 115
+
+    $default  reduce using rule 49 (S_3)
+
+
+State 112
 
    18 patt_expr: `<` ID `,` `[` S_3 • `]` `>`
 
-    `]`  shift, and go to state 100
+    `]`  shift, and go to state 116
 
 
-State 99
+State 113
 
-   43 S_3_L: S_3_L `,` • patt_expr
+   65 S_8_L: S_8_L type_expr_atom •
 
-    NUM  shift, and go to state 42
-    CHAR  shift, and go to state 43
-    ID  shift, and go to state 44
-    `(`  shift, and go to state 45
-    `<`  shift, and go to state 46
-
-    patt_expr  go to state 101
+    $default  reduce using rule 65 (S_8_L)
 
 
-State 100
+State 114
+
+   62 S_7_L: S_7_L `|` constructor_arg •
+
+    $default  reduce using rule 62 (S_7_L)
+
+
+State 115
+
+   47 S_3_L: S_3_L `,` • patt_expr
+
+    NUM  shift, and go to state 45
+    CHAR  shift, and go to state 46
+    ID  shift, and go to state 47
+    `(`  shift, and go to state 48
+    `<`  shift, and go to state 49
+
+    patt_expr  go to state 117
+
+
+State 116
 
    18 patt_expr: `<` ID `,` `[` S_3 `]` • `>`
 
-    `>`  shift, and go to state 102
+    `>`  shift, and go to state 118
 
 
-State 101
+State 117
 
-   43 S_3_L: S_3_L `,` patt_expr •
+   47 S_3_L: S_3_L `,` patt_expr •
 
-    $default  reduce using rule 43 (S_3_L)
+    $default  reduce using rule 47 (S_3_L)
 
 
-State 102
+State 118
 
    18 patt_expr: `<` ID `,` `[` S_3 `]` `>` •
 

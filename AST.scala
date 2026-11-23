@@ -45,14 +45,19 @@ type_expr:
 	- PolyType [identifier] type_expr     | @ i1, ..., iN. t
 */
 
-case object NumType extends TypeExpr 
-case object CharType extends TypeExpr 
-case class VarType(id: String) extends TypeExpr 
-case class ConstructorType(id: String, argTypes: List[TypeExpr]) extends TypeExpr 
-case class FunType(argType: TypeExpr, returnType: TypeExpr) extends TypeExpr
-case class PolyType(vars: List[String], body: TypeExpr) extends TypeExpr
-case class UnknownType(var texpr: Option[TypeExpr]) extends TypeExpr
-class RigidType extends TypeExpr
+case object NumType extends TypeExpr                                                     { override def toString: String = "Num" }
+case object CharType extends TypeExpr                                                    { override def toString: String = "Char" }
+case class VarType(id: String) extends TypeExpr                                          { override def toString: String = id }
+case class ConstructorType(id: String, argTypes: List[TypeExpr]) extends TypeExpr        { override def toString: String = 
+																							if (argTypes.isEmpty) id else s"$id[${argTypes.mkString(", ")}]"  }
+case class FunType(argType: TypeExpr, returnType: TypeExpr) extends TypeExpr             { override def toString: String = s"($argType) -> ($returnType)" }
+
+case class PolyType(vars: List[String], body: TypeExpr) extends TypeExpr                 { override def toString: String = 
+																							if (vars.isEmpty) body.toString else s"@${vars.mkString(", ")}. $body" }
+		
+case class UnknownType(var texpr: Option[TypeExpr]) extends TypeExpr                     { override def toString: String = texpr match { case None => "Unknown"
+																															             case Some(t) => t.toString } }
+class RigidType(var id: String = "") extends TypeExpr                                    { override def toString: String = if (id == "") then "RigidType" else id }
 
 
 sealed trait Decl extends Statement

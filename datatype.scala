@@ -1,6 +1,7 @@
 package femtoml
 
 import femtoml.AST
+import femtoml.Infer
 
 
 /*
@@ -17,15 +18,13 @@ object DataType
 
 case class TypeDefException(message: String) extends Exception(message)
 
-case class ConstructorSignature(vars: List[String], argTypes: List[TypeExpr], returnType: TypeExpr)
-type ConstructorEnv = Map[String, ConstructorSignature]
-type TypeDefEnv = Map[String, ConstructorType]
 
 // main entry point
 def checkDataTypes[A](p: Program, cont: (TypeDefEnv, ConstructorEnv) => A): A = {
 	// register the names of all new data types, then go back and process all type constructors
 	evalDataDecls(p, d => evalConstructors(p, d, c => cont(d, c)))
 }
+
 
 // first pass
 def evalDataDecls[A](p: Program, cont: TypeDefEnv => A): A = {
@@ -34,7 +33,6 @@ def evalDataDecls[A](p: Program, cont: TypeDefEnv => A): A = {
 	
 	p match 
 		case EmptyStmt => cont(Map.empty)
-
 		case SeqStmt(h, t) =>
 	
 			// look through rest of program first, then analyse h
@@ -74,31 +72,39 @@ def evalConstructors[A](p: Program, env: TypeDefEnv, cont: ConstructorEnv => A):
 						if (names.distinct.length != names.length) throw new TypeDefException(s"Duplicate constructors in $id")
 
 						// generate constructor signatures
-						val current = constructors.map { case (cid, cargs) => 
+						resolveConstructorList(constructors, vars, data, env, current => 
 
-							// for each constructor, resolve all argument types and create mapping to constructor signature
-							resolveConstructorArgs(cargs, env, vars.toSet, rs => cid -> ConstructorSignature(vars, rs, data))
-							
-						}.toMap
+							// Check for duplicate constructors across declarations
+							val duplicates = current.keySet.intersect(rest.keySet)
+							if (duplicates.nonEmpty) throw new TypeDefException(s"Duplicate constructors: ${duplicates.mkString(", ")}")
 
-						// Check duplicate constructors across declarations
-						val duplicates = current.keySet.intersect(rest.keySet)
-
-						if (duplicates.nonEmpty) throw new TypeDefException(s"Duplicate constructors: ${duplicates.mkString(", ")}")
-
-						cont(current ++ rest)
+							cont(current ++ rest)
+						)
 
 					case _ => cont(rest)
 			)
 
 }
 
+// given a list of constructors, construct their signatures and add them to the environment
+def resolveConstructorList[A](cs: List[(String, List[TypeExpr])], vars: List[String], data: ConstructorType, env: TypeDefEnv, cont: ConstructorEnv => A) : A = {
+	cs match
+		case (cid, cargs)::rest => 
+			// resolve the types of the constructor's arguments
+			resolveConstructorArgs(cargs, env, vars.toSet, r => 
+				// generate a map of all other constructor signatures
+				resolveConstructorList(rest, vars, data, env, rs => 
+					// add this constructor's signature to the resulting map
+					cont(Map(cid -> ConstructorSignature(vars, r, data )) ++ rs)))
+		case Nil                => cont(Map.empty)
+}
+
 /*
 
 	the types of a constructor's arguments may include incorrectly parsed VarTypes that actually refer to constructors defined earlier in the program.
-	the parser does not handle this issue; instead, we fix it here by replacing any VarTypes with their matching ConstructorType
+	the parser does not handle this issue; instead, we fix it here by replacing any VarTypes with their matching ConstructorType.
 	
-	we check for undefined types and incorrect constructor arguments along the way 
+	we check for undefined types and incorrect constructor arguments along the way.
 */
 def resolveType[A](t: TypeExpr, env: TypeDefEnv, vars: Set[String], cont: TypeExpr => A): A = {
 	t match 
@@ -126,7 +132,6 @@ def resolveType[A](t: TypeExpr, env: TypeDefEnv, vars: Set[String], cont: TypeEx
 
 			// check that the correct number of type arguments have been supplied
 			val expectedArity = definition.argTypes.length
-
 			if (args.length != expectedArity) throw new TypeDefException(s"Type $id expects $expectedArity arguments, " + s"but received ${args.length}")
 
 			// return resolved constructor type

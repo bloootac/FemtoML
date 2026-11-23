@@ -3,355 +3,263 @@ package femtoml
 import femtoml.AST
 import femtoml.DataType
 import femtoml.Infer
+import femtoml.TypeAnnotations
 
 import java.util.IdentityHashMap
 
 object Type
 
-/*
-
-TODO: 
-
-
-resolve type annotations
-
-actually check type annotations...
-	- check monomorphic types
-	- check polymorphic types
-
-clean up and check
-
-convert all to cps?
-
-*/
-
 case class TypeException(message: String) extends Exception(message)
 
-type TypeEnv = Map[String, TypeExpr]
-case class TypeContext(variables: TypeEnv, constructors: ConstructorEnv, typeDefs: TypeDefEnv)
-
-def extendContextVars(env: TypeContext, vs: TypeEnv) = TypeContext(env.variables ++ vs, env.constructors, env.typeDefs)
-
 // top-level type checking
-def typeProgram(p: Program, env: TypeContext): Unit = {
+def typeProgram[A](p: Program, env: TypeContext, cont: TypeContext => A): A = {
 	p match
-		case EmptyStmt          => ()
+		case EmptyStmt          => cont(env)
 		case SeqStmt(h, t)      =>
 			h match
-				case e : Expr => evalType(env, e); typeProgram(t, env)
-				case d : Decl =>
-					val tenv = evalDeclTypes(env, d)
-					typeProgram(t, extendContextVars(env, tenv))
+				case e : Expr => evalType(env, e, r => typeProgram(t, env, cont))
+				case d : Decl => evalDeclTypes(env, d, tenv => typeProgram(t, extendContextVars(env, tenv), cont))
 }
 
 // evaluate a single type expression in a given context
-def evalType(env: TypeContext, expr: Expr) : TypeExpr = {
+def evalType[A](env: TypeContext, expr: Expr, cont: TypeExpr => A) : A = {
 
 	expr match
-		case Num(n)                                => NumType
-		case Character(c)                          => CharType
+		case Num(n)                                => cont(NumType)
+		case Character(c)                          => cont(CharType)
 
+		// make sure the variable exists in the environment, then instantiate it
 		case Identifier(id)                        => 
 			if (!env.variables.contains(id)) throw new TypeException(s"Variable $id does not exist in the given type environment")
-			else instantiate(env.variables(id))
+			else instantiate(env.variables(id), cont)
 			
 		case Constructor(id, xs)                   => 
 		
 			// attempt to fetch constructor information from environment
 			val ctype = env.constructors.getOrElse(id, throw new TypeException(s"Undefined constructor $id."))
 			
-			val (argTypes, returnType) = instantiateConstructor(ctype)
-			
-			if (xs.length != argTypes.length) throw new TypeException(s"Constructor $id expects ${argTypes.length} arguments, but received ${xs.length}")
-			
-			xs.zip(argTypes).foreach { case (x, expectedType) =>
-				val actualType = evalType(env, x)
+			// instantiate the constructor and check that the right number of arguments has been supplied
+			instantiateConstructor(ctype, {case (argTypes, returnType) => 
+				if (xs.length != argTypes.length) throw new TypeException(s"Constructor $id expects ${argTypes.length} arguments, but received ${xs.length}")
 				
-				try unify (actualType, expectedType)
-				catch
-					case error: TypeException => throw new TypeException(s"Constructor $id: argument $x has type $actualType, but expected $expectedType.")		
-			}
-				
-			returnType
-			
+				// ensure that each argument is of the correct type, then return the constructor's return type
+				evalArgTypes(id, env, xs.zip(argTypes), () => cont(returnType) )
+			})
 				
 		case Apply(f, x)                           => 
-			
+			// create a new type unknown for the return type
 			var tr = UnknownType(None)
-			var tf = evalType(env, f)
-			var tx = evalType(env, x)
-			
-			try unify(tf, FunType(tx, tr))
-			catch
-				error => throw new TypeException(s"$f : $tf can't be applied to $x : $tx because $error")
-				
-			tr
+			// infer the function's type, then infer the argument's type
+			evalType(env, f, tf => evalType(env, x, tx =>	
+				// attempt to unify the types and constrain the return type; return the return type if successful
+				try unify(tf, FunType(tx, tr), () => cont(tr))
+				catch
+					error => throw new TypeException(s"$f : $tf can't be applied to $x : $tx because ${error}")
+			))
 			
 		case Fun(id, body)                         => 
+			// create a new type unknown for the argument
 			var targ = UnknownType(None)
-			//var tbody = evalType(env + (id -> targ), body)
-			var tbody = evalType(extendContextVars(env, Map(id -> targ)), body)
-			FunType(targ, tbody)
+			// infer the function's type with an environment containing the argument's type
+			evalType(extendContextVars(env, Map(id -> targ)), body, tbody => cont(FunType(targ, tbody)))
 			
 		case CaseFun(cases)                        => 
+			// the case function's argument type and return type are unknown
 			val targ = UnknownType(None)
 			val tres = UnknownType(None)
 			
-			cases.foreach({
-				case(pattern, body) => 
-					val (tp, bindings) = evalPattern(env, pattern)
-					unify(targ, tp)
-					
-					//val tb = evalType(env ++ bindings, body)
-					val tb = evalType(extendContextVars(env, bindings), body)
-					unify(tres, tb)
-			})
-			
-			FunType(targ, tres)
+			// attempt to unify the types of all the patterns, and then the types of all the cases; if that succeeds, return the resulting types 
+			evalCaseTypes(cases, targ, tres, env, () => cont(FunType(targ, tres)))
 		
 		case Let(d, e)                             => 
-			val bindings = evalDeclTypes(env, d)
-			//val generalised = bindings.map({ case (id, t) => (id -> generalise(env.variables, t))})
-			
-			//evalType(env ++ generalised, e)
-			evalType(extendContextVars(env, bindings), e)
+			// evaluate types of declared variables, then evaluate the body in that context
+			evalDeclTypes(env, d, ds => evalType(extendContextVars(env, ds), e, cont))
 			
 }
 
+// given an argument type, a result type, and environment, attempt to unify all the patterns and all the bodies in a case function
+def evalCaseTypes[A](cases: List[(Expr, Expr)], targ: TypeExpr, tres: TypeExpr, env: TypeContext, cont: () => A) : A = {
+	cases match
+		// first evaluate the pattern to get its type and bindings
+		case (pat, body)::cs => evalPattern(env, pat, {case (tp, vs) =>
+			// attempt to unify this type with the argument type
+			unify(targ, tp, () => 
+				// then evaluate the type of the body in the augmented environment
+				evalType(extendContextVars(env, vs), body, tb => 
+					// attempt to unify the result with the return type
+					unify(tres, tb, () => 
+						// and repeat for the rest of the cases
+						evalCaseTypes(cs, targ, tres, env, cont))))
+		}) 
+		case Nil             => cont()
+} 
 
-def evalPattern(env: TypeContext, pattern: Expr) : (TypeExpr, TypeEnv) = {
+// given a list of tuples containing an expression and expected type, attempt to unify all pairs
+def evalArgTypes[A](id: String, env: TypeContext, args: List[(Expr, TypeExpr)], cont: () => A) : A = {
+	args match
+		case (x, t)::ets => evalType(env, x, ta => unify(ta, t, () => evalArgTypes(id, env, ets, cont))) 
+		case Nil => cont()
+}
+
+// given a pattern, infer its type and return the type environment of all of its variables
+def evalPattern[A](env: TypeContext, pattern: Expr, cont: (TypeExpr, TypeEnv) => A) : A = {
 	pattern match
-		case Num(_)                => (NumType, Map.empty)
-		case Character(_)          => (CharType, Map.empty)
+		case Num(_)                => cont(NumType, Map.empty)
+		case Character(_)          => cont(CharType, Map.empty)
+		
+		// return an environment mapping an identifier to a new type unknown
 		case Identifier(id)        => 
 			val tu = UnknownType(None)
-			(tu, Map(id -> tu))
+			cont(tu, Map(id -> tu))
+			
 		case Constructor(id, args) =>
 			
+			// retrieve type of constructor 
 			val ctype = env.constructors.getOrElse(id, throw new TypeException(s"Undefined constructor $id"))
 			
-			val (argTypes, returnType) = instantiateConstructor(ctype)
+			// instantiate constructor type
+			instantiateConstructor(ctype, { case (argTypes, returnType) =>
 			
-			if (args.length != argTypes.length) throw new TypeException(s"Constructor $id expects $argTypes.length arguments, but received $args.length")
-			
-			val results = args.map(arg => evalPattern(env, arg))
-			
-			results.map(_._1).zip(argTypes).foreach { case (actualType, expectedType) => unify(actualType, expectedType) }
+				// check that the correct number of arguments has been supplied
+				if (args.length != argTypes.length) throw new TypeException(s"Constructor $id expects ${argTypes.length} arguments, but received ${args.length}")
+				
+				// evaluate each of the supplied arguments, then check if they match the expected argument types for the constructor
+				evalPatterns(args, env, rs => unifyTuples(rs.map(_._1).zip(argTypes), () => 
 
-			//val bindings = Map.from(results.flatMap(_._2))
+					// make sure no duplicate variables are used
+					val allBindings = rs.flatMap(_._2)
+					val names = allBindings.map(_._1)
+					if (names.distinct.length != names.length) throw new TypeException(s"Duplicate variables in pattern $pattern")
+
+					// return the constructor's return type along with all of the bindings connected to each argument
+					cont(returnType, allBindings.toMap)
 			
-			val allBindings = results.flatMap(_._2)
-			val names = allBindings.map(_._1)
-			
-			if (names.distinct.length != names.length) throw new TypeException(s"Duplicate variables in pattern $pattern")
-			
-			
-			(returnType, Map.from(allBindings))
+			))})
 			
 		case _                     => throw new TypeException(s"Invalid pattern $pattern")
 			
-			
-			
+}
+
+// given a list of patterns, infer the types of each of them and generate their relevant bindings
+def evalPatterns[A](args: List[Expr], env: TypeContext, cont: List[(TypeExpr, TypeEnv)] => A) : A = {
+	args match
+		case a::as => evalPattern(env, a, (a, b) => evalPatterns(as, env, rs => cont((a,b)::rs)))
+		case Nil   => cont(Nil)
 }
 
 
 // when given a polymorphic type, instantiate it with fresh type unknowns
 // otherwise, return the given type
-def instantiate(texpr: TypeExpr) : TypeExpr = {
+def instantiate[A](texpr: TypeExpr, cont: TypeExpr => A) : A = {
 	texpr match
-		case PolyType(vs, t) => substitute(substitution(vs), t)
-		case _               => texpr
+		case PolyType(vs, t) => substitution(vs, rs => substitute(rs, t, cont))
+		case _               => cont(texpr)
 }
 
 
-def instantiateConstructor(sig: ConstructorSignature): (List[TypeExpr], TypeExpr) = {
-	val env = substitution(sig.vars)
+def instantiateConstructor[A](sig: ConstructorSignature, cont: (List[TypeExpr], TypeExpr) => A) : A = {
 	
-	val args = sig.argTypes.map(t => substitute(env, t))
-	
-	val result = substitute(env, sig.returnType)
-	
-	(args, result) 
-	
+	// create a mapping from each variable in the constructor type to a new type unknown
+	substitution(sig.vars, env =>
+		// then make the substitutions in each of the constructor's argument types
+		substituteList(env, sig.argTypes, args => 
+			substitute(env, sig.returnType, result => 
+				// return the list of substituted argument types and the substituted result type
+				cont(args, result)))
+	)
 	 
 }
 
-def substitute(env: Map[String, TypeExpr], texpr: TypeExpr) : TypeExpr = {
+// given a mapping of substitutions and a type expression, return the type expression with all appropriate substitutions made
+def substitute[A](env: Map[String, TypeExpr], texpr: TypeExpr, cont: TypeExpr => A) : A = {
 	texpr match
-		case VarType(id)                     => env.getOrElse(id, VarType(id))
-		/*
-			try env(id)
-			catch
-				case e : java.util.NoSuchElementException => throw new TypeException(s"Free type variable $id in polytype body.")
-				
-				*/
-		case ConstructorType(id, ts)         => ConstructorType(id, ts.map(t => substitute(env,t)))
-		case FunType(t1, t2)                 => FunType(substitute(env, t1), substitute(env,t2))
-		case PolyType(vars, body)            =>
-			var filtered = env -- vars
-			PolyType(vars, substitute(filtered, body))
-		case _                               => texpr
+		case VarType(id)                     => cont(env.getOrElse(id, VarType(id)))
+		case ConstructorType(id, ts)         => substituteList(env, ts, rs => cont(ConstructorType(id, rs)))
+		case FunType(t1, t2)                 => substitute(env, t1, r1 => substitute(env, t2, r2 => cont(FunType(r1, r2))))
+		case PolyType(vars, body)            => substitute(env -- vars, body, rb => cont(PolyType(vars, rb)))
+		case _                               => cont(texpr)
 
 }
 
-// given a list of type variables, return an environment mapping each identifier to a new type unknown
-def substitution(vs: List[String]) : Map[String, TypeExpr] = Map.from(vs.map(x => x -> (UnknownType(None) : TypeExpr)))
+// helper function for making all substitutions in a list of type expressions
+def substituteList[A](env: TypeEnv, ts: List[TypeExpr], cont: List[TypeExpr] => A) : A = {
+	ts match
+		case t::tys => substitute(env, t, r => substituteList(env, tys, rs => cont(r::rs)))
+		case Nil    => cont(Nil)
+}
 
+// given a list of type variables, return an environment mapping each identifier to a new type unknown
+def substitution[A](vs: List[String], cont: Map[String, TypeExpr] => A) : A = cont(vs.map(x => x -> (UnknownType(None) : TypeExpr)).toMap)
 
 
 // infer the types of a simultaneous group of declarations without generalising
-def evalDeclGroup(env: TypeContext, decl: Decl) : TypeEnv = {
+def evalDeclGroup[A](env: TypeContext, decl: Decl, cont: TypeEnv => A) : A = {
 	decl match
-		case ValDec(id, expr)          => Map(id -> evalType(env, expr))
+		case ValDec(id, expr)          => evalType(env, expr, res => cont(Map(id -> res)))
 
 		case AndDec(d1, d2)            =>
-			val env1 = evalDeclGroup(env, d1)
-			val env2 = evalDeclGroup(env, d2)
+			// evaluate d1 and d2 
+			evalDeclGroup(env, d1, env1 => evalDeclGroup(env, d2, env2 => 
+				
+				// check for duplicates
+				val duplicates = env1.keySet.intersect(env2.keySet)
+				if (duplicates.nonEmpty) throw new TypeException(s"Duplicate declarations: ${duplicates.mkString(", ")}")
 			
-			val duplicates = env1.keySet.intersect(env2.keySet)
-			if (duplicates.nonEmpty) throw new TypeException(s"Duplicate declarations: ${duplicates.mkString(", ")}")
+				// return combined environment
+				cont(env1 ++ env2)
+			))
 			
-			env1 ++ env2
-			
-			
-		case RecDec(ValDec(id, value)) =>
+		
+		case RecDec(ValDec(id, expr)) =>
+		
+			// create a new type unknown for the identifier
 			val tu = UnknownType(None)
 			
-			val inferred = evalType(extendContextVars(env, Map(id -> tu)), value)
+			// evaluate the expression in that context; unify the type unknown with the inferred type; add the type unknown to the type environment
+			evalType(extendContextVars(env, Map(id -> tu)), expr, ti => unify(tu, ti, () => cont(Map(id -> tu))))
 			
-			unify(tu, inferred)
-			
-			Map(id -> tu)
-			
-		case DataDec(_, _, _) => Map.empty
+		// ignore user-defined datatype declarations, since they have already been dealt with by datatype.scala
+		case DataDec(_, _, _) => cont(Map.empty)
 		
+		// a type annotation shouldn't occur on its own 
 		case HasType(id	, _) => throw new TypeException(s"Expected a declaration of $id immediately after type annotation.")
 }
 
 
 // infer the types of a declaration and generalise it
-def evalDeclTypes(env: TypeContext, decl: Decl) : TypeEnv = {
+def evalDeclTypes[A](env: TypeContext, decl: Decl, cont: TypeEnv => A) : A = {
 	decl match 
 	
+		// type annotation + declaration
 		case SeqDec(HasType(id, typeExpr), d2) =>
 	
-			val expr = d2 match
-				case SeqDec(ValDec(id2, e), _) if id == id2        => e 
-				case SeqDec(RecDec(ValDec(id2, e)), _) if id == id2 => e
-				case _                                             => throw new TypeException(s"Expected a declaration of $id immediately after type annotation.")
+			val (expr, rec) = d2 match
+				case ValDec(id2, e) if id == id2         => (e, false) 
+				case RecDec(ValDec(id2, e)) if id == id2 => (e, true)
+				case _                                   => throw new TypeException(s"Expected a declaration of $id immediately after type annotation.")
 				
-				
-			checkAnnotatedType(id, typeExpr, expr, env)
+			// verify the user's type annotation
+			checkAnnotatedType(id, rec, typeExpr, expr, env, cont)
 			
-	
 		case SeqDec(d1, d2) =>
-			val env1 = evalDeclTypes(env, d1)
-			
-			val env2 = evalDeclTypes(extendContextVars(env, env1), d2)
-			
-			env1 ++ env2
+			// evaluate d1, evaluate d2, return combined type environment
+			evalDeclTypes(env, d1, env1 => evalDeclTypes(extendContextVars(env, env1), d2, env2 => cont(env1 ++ env2)))
 		
 		case _              =>
-			
-			val bindings = evalDeclGroup(env, decl)
-			
-			Map.from(bindings.map { case (id, t) => id -> generalise(env.variables, t) })
+			// evaluate the declaration and generalise every entry in the resulting environment
+			evalDeclGroup(env, decl, vs => generaliseEnv(vs.toList, env, cont))
 	
 	
 }
 
-
-
-
-
-
-def generalise(env: TypeEnv, t: TypeExpr) : TypeExpr = {
-
-	val envVars = env.values.toList.flatMap(unknowns)
-	val freeVars = unknowns(t).filterNot { u => envVars.exists(_ eq u) }
-	
-	var usedNames = collectNames(t)
-	
-	env.values.foreach(v => usedNames ++= collectNames(v))
-	
-
-	var next = 0
-	val replacements = freeVars.map(u => { val (s, n, ns) = freshName(usedNames, next); next = n; usedNames = ns; (u, s) } )
-	
-	val body = replace(t, replacements)
-	
-	val vars = replacements.map(_._2)
-	
-	if (vars.isEmpty) body
-	else PolyType(vars, body)
+// given a type environment in list form, return the type environment gained from generalising every element
+def generaliseEnv[A](envList: List[(String, TypeExpr)], env: TypeContext, cont: TypeEnv => A) : A = {
+	envList match
+		case (id, t)::es => generalise(env.variables, t, tg => generaliseEnv(es, env, rs => cont(Map(id -> tg) ++ rs)))
+		case Nil         => cont(Map.empty)
 }
 
 
-
-
-def checkAnnotatedType(id: String, typeExpr: TypeExpr, expr: Expr, env: TypeContext) : TypeEnv = {
-
-		typeExpr match 
-			case PolyType(vars, body) => 
-				
-			
-				val resolvedBody = resolveType(typeExpr, env.typeDefs, vars.toSet)
-				val ta = PolyType(vars, resolvedBody)
-				
-				val ti = instantiate(generalise(env.variables, evalType(env, expr)))
-				
-				val rigidMap = vars.map(v => v -> (new RigidType : TypeExpr)).toMap
-				
-				val ra = substitute(rigidMap, resolvedBody)
-				
-				val cs = safeUnify(ti, ra, new IdentityHashMap[UnknownType, TypeExpr]())
-				
-				try checkRigidEscape(env, cs, rigidMap.values.collect{case r : RigidType => r}.toList)
-				catch 
-					case error => throw new TypeException(s"Invalid polymorphic type annotation for $id")
-					
-				Map(id -> ta)
-				
-				
-			case _                    =>
-			
-				// resolve annotated type
-				val ta = resolveType(typeExpr, env.typeDefs, Set.empty)
-
-				// infer type from expression
-				val ti = evalType(env, expr)
-				
-				// attempt to unify the two
-				unify(ta, ti)
-				
-				// if that succeeds, add the annotated type to the environment
-				Map(id -> ta)
-	
-}
-
-
-def checkRigidEscape(env: TypeContext, cs: Constraints, rs: List[RigidType]) : Unit = {
-	val protectedUnknowns = env.variables.values.toList.flatMap(unknowns)
-	
-	val escaped = protectedUnknowns.exists { u => containsRigid(applyConstraints(u, cs), rs) }
-	
-	if (escaped) throw new TypeInferenceException("Rigid type variable escaped into surrounding environment")
-}
-
-def applyConstraints(t: TypeExpr, cs: Constraints) : TypeExpr = {
-	safeResolve(t, cs) match
-		case ConstructorType(id, args) => ConstructorType(id, args.map(t => applyConstraints(t, cs)))
-		case FunType(arg, ret)         => FunType(applyConstraints(arg, cs), applyConstraints(ret, cs))
-		case other                     => other 
-}
-
-def containsRigid(t: TypeExpr, rs: List[RigidType]) : Boolean = {
-	t match
-		case r : RigidType => rs.exists(r2 => r2 eq r)
-		case ConstructorType(_, ts) => ts.exists(t => containsRigid(t, rs))
-		case FunType(arg, ret)      => containsRigid(arg, rs) || containsRigid(ret, rs)
-		case _ => false
-}
 
 
 

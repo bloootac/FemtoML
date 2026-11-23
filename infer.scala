@@ -7,13 +7,33 @@ import java.util.IdentityHashMap
 object Infer
 
 /*
-	this object contains the main components of the type inference engine.
+	this object defines the main components of the type inference engine:
+		- type environments
+		- unification
+		- "safe" unification, for checking type annotations written by the user
+		- generalisation
 */
 
 case class TypeInferenceException(message: String) extends Exception(message)
 
+// ============================= environment ============================= 
+
+// environments for user-defined types and constructors 
+case class ConstructorSignature(vars: List[String], argTypes: List[TypeExpr], returnType: TypeExpr)
+type ConstructorEnv = Map[String, ConstructorSignature]
+type TypeDefEnv = Map[String, ConstructorType]
+
+// constraints are used for "safe" unification
 type Constraints = IdentityHashMap[UnknownType, TypeExpr]
 
+// environment for variables
+type TypeEnv = Map[String, TypeExpr]
+
+// wider type context
+case class TypeContext(variables: TypeEnv, constructors: ConstructorEnv, typeDefs: TypeDefEnv)
+
+// helper function for adding a new variable to a type context
+def extendContextVars(env: TypeContext, vs: TypeEnv) = TypeContext(env.variables ++ vs, env.constructors, env.typeDefs)
 
 // ============================= unification ============================= 
 
@@ -77,7 +97,7 @@ def equate[A](t1: UnknownType, t2: TypeExpr, cont: () => A) : A = {
 // check whether the first type occurs in the second
 def occurs[A](t1: UnknownType, t2: TypeExpr, cont: Boolean => A) : A = {
 	typeclass(t2, false, r => r match 
-		case u: UnknownType            => cont(t1 eq t2)
+		case u: UnknownType            => cont(t1 eq u)
 		case ConstructorType(_, ts)    => occursInList(t1, ts, cont)
 		case FunType(targ, tbody)      => occurs(t1, targ, res => if (res) cont(true) else occurs(t1, tbody, cont))
 		case _                         => cont(false)
@@ -175,10 +195,35 @@ def safeOccursInList[A](t1: UnknownType, ts: List[TypeExpr], cs: Constraints, co
 		case Nil     => cont(false)
 }
 
-// ============================= generalisation ============================= 
-// generalise() is defined in type.scala as it requires type environments
 
-// given a type expression, generate a list of the unique type unknows that occur in the expression. TODO convert to cps
+// ============================= generalisation ============================= 
+
+// convert a type expression containing unknowns to a polymorphic type with type variables
+def generalise[A](env: TypeEnv, t: TypeExpr, cont: TypeExpr => A) : A = {
+	
+	// collect all the unknowns in the type expression
+	collectUnknownsInList(env.values.toList, envVars => unknowns(t, res => 
+	
+		// get the unknowns which are not defined in the wider environment (free variables)
+		val freeVars = res.filterNot { u => envVars.exists(_ eq u) }
+		
+		// collect all type identifiers used in the expression and the environment
+		collectNames(t, res1 => 
+			collectNamesInList(env.values.toList, res2 =>
+				val usedNames = res1++res2
+
+				// obtain a mapping from each free variable in the type expression to a unique name
+				freshNamesForList(freeVars, usedNames, 0, replacements => 
+					// carry out the substitutions in the type expression
+					replace(t, replacements, body =>
+					
+						// if there are no free variables, return a monotype - otherwise, return a polymorphic type
+						val vars = replacements.map(_._2)
+						if (vars.isEmpty) cont(body) else cont(PolyType(vars, body))
+	))))))
+}
+
+// given a type expression, generate a list of the unique type unknows that occur in the expression.
 def unknowns[A](t: TypeExpr, cont: List[UnknownType] => A) : A = collectUnknowns(t, us => uniqueUnknowns(us, Nil, cont))
 
 
@@ -200,6 +245,7 @@ def uniqueUnknowns[A](rs: List[UnknownType], acc: List[UnknownType], cont: List[
 		case Nil     => cont(acc)
 }
 
+// helper function for generating a list of unknown types from a list of type expressions
 def collectUnknownsInList[A](ts: List[TypeExpr], cont: List[UnknownType] => A) : A = {
 	ts match
 		case t::tys => collectUnknowns(t, r => collectUnknownsInList(tys, rs => cont(r ++ rs)))
@@ -235,7 +281,17 @@ def freshName[A](usedNames: Set[String], next: Int, cont: (String, Int, Set[Stri
 		name = s"t$newNext"
 	}
 	
-	cont(name, newNext, usedNames+name)
+	cont(name, newNext + 1, usedNames+name)
+}
+
+// helper function for generating a fresh name for every element in a list of type unknowns
+def freshNamesForList[A](freeVars: List[UnknownType], usedNames: Set[String], next: Int, cont: List[(UnknownType, String)] => A): A = {
+	freeVars match
+		case v::vs => 
+			freshName(usedNames, next, {case (name, next2, usedNames2) => 
+				freshNamesForList(vs, usedNames2, next2, names => cont((v, name)::names))
+			})
+		case Nil  => cont(List.empty)
 }
 
 // given a type expression and a map from type unknowns to identifiers, return the type expression with all substitutions made
@@ -259,7 +315,7 @@ def replace[A](t: TypeExpr, replacements: List[(UnknownType, String)], cont: Typ
 			
 }
 
-
+// helper function for making substitutions in every element of a list of type expressions
 def replaceInList[A](ts: List[TypeExpr], rs: List[(UnknownType, String)], cont: List[TypeExpr] => A) : A = {
 	ts match
 		case t::tys => replace(t, rs, r1 => replaceInList(tys, rs, r2 => cont(r1::r2)))

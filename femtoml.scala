@@ -1,17 +1,23 @@
 object FemtoML {
 
+	//TODO: change environment and include type checker, also update method names
+
 	import femtoml._
 	import femtoml.Scanner._
 	import femtoml.Components._
 	import femtoml.Semantics._
+	import femtoml.TypeChecker._
+
+
 	import org.sufrin.scalalr._
 	import org.sufrin.scalalr.LRParser._
 	import org.sufrin.utility._
 	import org.sufrin.utility.PrettyPrint._
 
+	import scala.collection.mutable.Map
+
 	import java.nio.file.{Files, Paths}
 
-	import scala.collection.mutable.Map
 	import Console.{GREEN, RED, BLUE, RESET}
 
 
@@ -20,50 +26,56 @@ object FemtoML {
 
 	// interpreter's main entry point
 	def main(args: Array[String]): Unit = {
-
+		
 		//attempt to import and run file if one is given
-		var env = if (!args.isEmpty) loadFiles(args) else Map.empty
+		var (env, typenv) = if (!args.isEmpty) loadFiles(args) else (Map[String, Value](), emptyTypeContext)
 		
 		//run interactive interpreter 
-		runInTerminal(env)
+		runInTerminal(env, typenv)
 		
 	}
 
 	// terminal interface for interpreter
-	def runInTerminal(env: Env = Map.empty): Unit = {
-		// TODO: make prettier, allow user to exit script, allow multi-line statements
+	def runInTerminal(env: Env = Map.empty, tenv: TypeContext): Unit = {
+		// TODO: allow multi-line statements
+
+		var currentTypeEnv = tenv
 		
-		while (true) {
+		while (true) 
 			// collect one-line user input
 			print(femtoml_str)
 			val program = scala.io.StdIn.readLine()
 			
-			val res = parseAndInterpret(program, xs => for (x <- xs) println(x), env)
+			// parse, type-check, and interpret input
+			val res = parseTypeInterpret(program, (tc, xs) => printTypeEnv(tc, () => { for (x <- xs) println(x); currentTypeEnv = tc }), env, currentTypeEnv)
 				
+			// if an error occured, print it
 			res match
 				case Left(_)      => ()
 				case Right(err)   => println(s"$error_str $err")
+				
 
-		}
 			
 	}
 
 	// run interpreter on multiple files
-	def loadFiles(filePaths: Array[String]): Env = {
+	def loadFiles(filePaths: Array[String]): (Env, TypeContext) = {
 
-		// initialise environment
+		// initialise environments
 		var env : Env = Map.empty[String, Value]
+		var typenv = emptyTypeContext
 
 		for (file <- filePaths) 
 		do
 			val path = Paths.get(file)
 			
 			if (Files.exists(path)) 
+				// retrieve file content
 				val content = scala.io.Source.fromFile(file).getLines().mkString("\n")
-
+				// attempt to parse, type-check, and interpret the file 
+				val res = parseTypeInterpret(content, (ts, xs) => { for (x <- xs) println(x); typenv = ts }, env, typenv)
 				
-				val res = parseAndInterpret(content, xs => for (x <- xs) println(x), env)
-				
+				// print out success/error message
 				res match
 					case Left(_)      => println(s"Loaded $file")
 					case Right(err)   => println(s"$error_str: File $file could not be loaded. $err")
@@ -72,11 +84,12 @@ object FemtoML {
 				println(s"$error_str: File $file not found.")
 				
 		println("Running interpreter in terminal...")
-		env
+		(env, typenv)
 	}
 
-	// given a program string, attempt to parse and interpret it
-	def parseAndInterpret[A](program: String, cont: List[Value] => A, env: Env = Map.empty): Either[A, Throwable] = {
+	// given a program string, attempt to parse, type-check, and interpret it
+	def parseTypeInterpret[A](program: String, cont: (TypeContext, List[Value]) => A, env: Env, typenv: TypeContext): Either[A, Throwable] = {
+	
 		// initialise scanner and parser
 		val scanner = new FemtoMLScanner(SourceTextCursor(program))
 		val parser  = org.sufrin.scalalr.LRParser.Pull[Token](Components)(scanner.sourceLocation)
@@ -87,14 +100,17 @@ object FemtoML {
 				case ACCEPTED(value) => 
 				
 					// Uncomment to print AST:
-					// value.prettyPrint()
-					// println("***")
+					//value.prettyPrint()
+					//println("***")
 					
-					// run program through interpreter, run continuation on output
 					value match
 						case p : Program => 
 							try
-								Left(evalProgram(p, env, cont))
+								// run type checker on program
+								runTypeChecker(p, typenv, typenv2 => 
+									// run interpreter if type checking is successful
+									evalProgram(p, env, vs => Left(cont(typenv2, vs))))
+
 							catch
 								case s => Right(s)
 							
@@ -108,5 +124,8 @@ object FemtoML {
 
 		}
 	}
+
 }
+
+
 

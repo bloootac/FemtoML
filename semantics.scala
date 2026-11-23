@@ -10,6 +10,7 @@ object Semantics
 /*
 
 TODO: add type-checking
+tail recursion annotations?
 
 */
 
@@ -215,6 +216,8 @@ def evalDecl[A](env: Env, decl: Decl, cont: Env => A): A = {
 		
 		// for now, ignore type declarations
 		case HasType(_, _)    => cont(Map())
+		
+		case DataDec(_, _, _) => cont(Map())
 		
 		// knot-tying...
 		case RecDec(d)        => {

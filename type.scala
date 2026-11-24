@@ -52,9 +52,7 @@ def evalType[A](env: TypeContext, expr: Expr, cont: TypeExpr => A) : A = {
 			// infer the function's type, then infer the argument's type
 			evalType(env, f, tf => evalType(env, x, tx =>	
 				// attempt to unify the types and constrain the return type; return the return type if successful
-				try unify(tf, FunType(tx, tr), () => cont(tr))
-				catch
-					error => throw new TypeException(s"$f : $tf can't be applied to $x : $tx because ${error}")
+				unify(tf, FunType(tx, tr), () => cont(tr))
 			))
 			
 		case Fun(id, body)                         => 

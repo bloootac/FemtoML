@@ -1,7 +1,5 @@
 object FemtoML {
 
-	//TODO: change environment and include type checker, also update method names
-
 	import femtoml._
 	import femtoml.Scanner._
 	import femtoml.Components._
